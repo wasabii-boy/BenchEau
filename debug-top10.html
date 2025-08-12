@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Top 10 - BenchEau</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+                400: '#38bdf8', 500: '#0891b2', 600: '#0e7490', 700: '#155e75',
+                800: '#164e63', 900: '#0c4a6e',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      .glass { 
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .dark .glass { 
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.4);
+      }
+      .shadow-soft { box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-100 min-h-screen p-8">
+    
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">🔧 Debug Top 10 - BenchEau</h1>
+        
+        <div class="glass rounded-xl p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">État du chargement</h2>
+            <div id="loading-status" class="text-sm">
+                <div>⏳ Chargement des données...</div>
+            </div>
+        </div>
+        
+        <div class="glass rounded-xl p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Top 10 des eaux</h2>
+            <div id="top5-chart" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <!-- Sera rempli par JavaScript -->
+            </div>
+        </div>
+        
+        <div class="glass rounded-xl p-6">
+            <h2 class="text-xl font-bold mb-4">Debug Console</h2>
+            <div id="debug-console" class="bg-slate-100 dark:bg-slate-800 rounded p-4 text-xs font-mono max-h-96 overflow-y-auto">
+                <!-- Console de debug -->
+            </div>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <button id="toggle-theme" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                🌙 Toggle Theme
+            </button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { loadData } from './js/data.js';
+        
+        // Debug console
+        const debugConsole = document.getElementById('debug-console');
+        function log(msg) {
+            debugConsole.innerHTML += msg + '\n';
+            debugConsole.scrollTop = debugConsole.scrollHeight;
+            console.log(msg);
+        }
+        
+        // State
+        const state = {
+            data: [],
+            filtered: []
+        };
+        
+        // Utilitaires
+        function qs(id) { return document.getElementById(id); }
+        function fmt(v, decimals = 1) {
+            if (v === undefined || v === null || Number.isNaN(v)) return '-';
+            if (typeof v === 'number') {
+                return Number.isInteger(v) ? String(v) : v.toFixed(decimals);
+            }
+            return String(v);
+        }
+        
+        // Import des fonctions depuis main.js
+        const { calculateWaterScore, renderScoresChart } = await import('./js/main.js').catch(() => {
+            // Copie locale simplifiée pour le debug
+            return {
+                calculateWaterScore(water) {
+                    let score = 0;
+                    
+                    // Score pH (optimal: 6.5-8.5)
+                    if (water.ph) {
+                        if (water.ph >= 6.5 && water.ph <= 8.5) {
+                            score += 20;
+                        } else if (water.ph >= 6.0 && water.ph <= 9.0) {
+                            score += 10;
+                        }
+                    }
+                    
+                    // Score sodium
+                    if (water.sodium !== undefined && water.sodium !== null) {
+                        if (water.sodium <= 20) {
+                            score += 20;
+                        } else if (water.sodium <= 50) {
+                            score += 15;
+                        } else if (water.sodium <= 200) {
+                            score += 10;
+                        }
+                    }
+                    
+                    // Score microplastiques
+                    if (water.microplasticsParticlesPerLiter !== undefined) {
+                        if (water.microplasticsParticlesPerLiter <= 1) {
+                            score += 20;
+                        } else if (water.microplasticsParticlesPerLiter <= 3) {
+                            score += 15;
+                        } else if (water.microplasticsParticlesPerLiter <= 5) {
+                            score += 10;
+                        } else {
+                            score += 5;
+                        }
+                    }
+                    
+                    // Score minéralisation
+                    if (water.residuSec) {
+                        if (water.residuSec >= 150 && water.residuSec <= 500) {
+                            score += 20;
+                        } else if (water.residuSec >= 50 && water.residuSec <= 1000) {
+                            score += 15;
+                        } else if (water.residuSec < 50) {
+                            score += 10;
+                        } else {
+                            score += 5;
+                        }
+                    }
+                    
+                    // Bonus calcium/magnésium
+                    if (water.calcium && water.calcium >= 50 && water.calcium <= 150) {
+                        score += 10;
+                    }
+                    if (water.magnesium && water.magnesium >= 10 && water.magnesium <= 50) {
+                        score += 10;
+                    }
+                    
+                    // Normaliser sur 100 (score max théorique: 120)
+                    const maxPossible = 120;
+                    return Math.min(100, Math.round((score / maxPossible) * 100));
+                }
+            };
+        });
+        
+        // Rendu simplifié du Top 10
+        function renderTop10() {
+            const chartContainer = qs('top5-chart');
+            if (!chartContainer) {
+                log('❌ Container top5-chart non trouvé');
+                return;
+            }
+            
+            log(`📊 Rendu du Top 10 avec ${state.filtered.length} eaux filtrées`);
+            
+            // Calculer les scores
+            const allScoredWaters = state.filtered.map(water => ({
+                ...water,
+                score: calculateWaterScore(water)
+            })).sort((a, b) => b.score - a.score);
+            
+            const scoredWaters = allScoredWaters.slice(0, 10);
+            log(`🏆 Top 10 calculé: ${scoredWaters.map(w => w.name + ':' + w.score).join(', ')}`);
+            
+            if (scoredWaters.length === 0) {
+                chartContainer.innerHTML = '<div class="text-center py-8 text-slate-500">Aucune eau trouvée</div>';
+                return;
+            }
+            
+            const maxScore = Math.max(...scoredWaters.map(w => w.score), 1);
+            
+            chartContainer.innerHTML = scoredWaters.map((water, index) => {
+                const percentage = (water.score / maxScore) * 100;
+                
+                const strengths = [];
+                if (water.ph >= 6.5 && water.ph <= 8.5) strengths.push('pH optimal');
+                if (water.sodium <= 20) strengths.push('Faible sodium');
+                if (water.microplasticsParticlesPerLiter <= 1) strengths.push('Peu de microplastiques');
+                
+                return `
+                    <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 shadow-soft">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                ${index + 1}
+                            </div>
+                            <div class="text-green-600 dark:text-green-400 font-bold text-lg">${water.score}/100</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h3 class="text-slate-900 dark:text-white font-semibold text-sm mb-1">${water.name}</h3>
+                            <div class="w-full bg-slate-300 dark:bg-slate-600 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                        
+                        ${strengths.length > 0 ? `
+                            <div class="space-y-1 mb-3">
+                                ${strengths.slice(0, 2).map(strength => `
+                                    <div class="flex items-center text-green-600 dark:text-green-400 text-xs">
+                                        <span class="mr-1">✓</span>
+                                        <span>${strength}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="grid grid-cols-3 gap-2 text-xs text-slate-600 dark:text-slate-400">
+                            <div>pH ${fmt(water.ph)}</div>
+                            <div>Na ${fmt(water.sodium)}mg</div>
+                            <div>MP ${fmt(water.microplasticsParticlesPerLiter, 1)}p/L</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Test principal
+        async function test() {
+            const loadingStatus = qs('loading-status');
+            
+            try {
+                log('🚀 Début du test de chargement...');
+                
+                const { rows, error } = await loadData();
+                
+                if (error) {
+                    log(`❌ Erreur: ${error}`);
+                    loadingStatus.innerHTML = `<div class="text-red-600">❌ ${error}</div>`;
+                    return;
+                }
+                
+                log(`✅ Chargement réussi: ${rows.length} eaux`);
+                state.data = rows;
+                state.filtered = rows; // Pas de filtres pour le test
+                
+                loadingStatus.innerHTML = `
+                    <div class="text-green-600">✅ ${rows.length} eaux chargées</div>
+                    <div class="mt-2 text-xs">Première eau: ${rows[0]?.name} (pH: ${rows[0]?.ph}, Na: ${rows[0]?.sodium})</div>
+                `;
+                
+                // Test du scoring sur les 5 premières eaux
+                rows.slice(0, 5).forEach(water => {
+                    const score = calculateWaterScore(water);
+                    log(`🧮 ${water.name}: score=${score}, pH=${water.ph}, Na=${water.sodium}, MP=${water.microplasticsParticlesPerLiter}`);
+                });
+                
+                renderTop10();
+                
+            } catch (err) {
+                log(`💥 Exception: ${err.message}`);
+                loadingStatus.innerHTML = `<div class="text-red-600">💥 ${err.message}</div>`;
+                console.error('Erreur complète:', err);
+            }
+        }
+        
+        // Toggle theme
+        document.getElementById('toggle-theme').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+        
+        // Lancer le test
+        test();
+    </script>
+</body>
+</html>

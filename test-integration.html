@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Intégration Complète - BenchEau</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        .data-row { border: 1px solid #ccc; margin: 5px; padding: 10px; }
+        .data-section { background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .missing { color: #dc3545; }
+        .present { color: #28a745; }
+    </style>
+</head>
+<body class="p-8 bg-gray-50">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center">🧪 Test Intégration Complète</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">État du chargement</h2>
+            <div id="loading-status">⏳ Chargement...</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4">Statistiques d'intégration</h2>
+            <div id="integration-stats"></div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-4">Exemple de données (première eau)</h2>
+            <div id="sample-data"></div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { loadData } from './js/data.js';
+        
+        const expectedFields = [
+            // Base
+            'id', 'name', 'type', 'typeEau', 'source', 'region', 'proprietaire', 'anneeReconnaissance', 'conditionnement',
+            
+            // Physico-chimique
+            'ph', 'conductivite', 'residuSec', 'temperature',
+            
+            // Minéraux
+            'bicarbonates', 'calcium', 'magnesium', 'sodium', 'potassium', 'chlorures', 'sulfates', 'nitrates', 'fluorures', 'silice', 'fer',
+            
+            // Contaminants
+            'microplasticsParticlesPerLiter', 'tfa', 'pfoa', 'pfos', 'sommePFAS', 'pesticidesPertinenets', 'pesticidesNonPertinents', 'bisphenols', 'phtalates', 'residusMedicamenteux',
+            
+            // Radioactivité
+            'activiteAlpha', 'activiteBeta', 'tritium', 'dti', 'uranium', 'radon',
+            
+            // Nutrition
+            'ajrCalcium', 'ajrMagnesium',
+            
+            // Environnement
+            'empreinteCarbone', 'empreinteHydrique', 'tauxRecyclage',
+            
+            // Conformité
+            'conformiteEU', 'conformiteANSES', 'stabilite', 'coefficientVariation', 'laboratoireControle', 'dateAnalyse',
+            
+            // Usage
+            'usages', 'restrictions', 'contreIndications', 'mentionsEtiquetage', 'certifications', 'historique', 'typeOfficiel'
+        ];
+        
+        async function testIntegration() {
+            const loadingStatus = document.getElementById('loading-status');
+            const integrationStats = document.getElementById('integration-stats');
+            const sampleData = document.getElementById('sample-data');
+            
+            try {
+                const { rows, error } = await loadData();
+                
+                if (error) {
+                    loadingStatus.innerHTML = `<span class="missing">❌ ${error}</span>`;
+                    return;
+                }
+                
+                loadingStatus.innerHTML = `<span class="present">✅ ${rows.length} eaux chargées</span>`;
+                
+                if (rows.length === 0) {
+                    integrationStats.innerHTML = '<span class="missing">❌ Aucune donnée chargée</span>';
+                    return;
+                }
+                
+                // Analyse des champs
+                const firstWater = rows[0];
+                const presentFields = [];
+                const missingFields = [];
+                
+                expectedFields.forEach(field => {
+                    if (firstWater[field] !== undefined && firstWater[field] !== null && firstWater[field] !== '') {
+                        presentFields.push(field);
+                    } else {
+                        missingFields.push(field);
+                    }
+                });
+                
+                // Affichage des stats
+                integrationStats.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="present">
+                            <h3 class="font-bold">✅ Champs intégrés (${presentFields.length}/${expectedFields.length})</h3>
+                            <div class="text-sm mt-2 max-h-40 overflow-y-auto">
+                                ${presentFields.map(field => `<span class="bg-green-100 px-2 py-1 m-1 rounded text-xs">${field}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="missing">
+                            <h3 class="font-bold">❌ Champs manquants (${missingFields.length})</h3>
+                            <div class="text-sm mt-2 max-h-40 overflow-y-auto">
+                                ${missingFields.map(field => `<span class="bg-red-100 px-2 py-1 m-1 rounded text-xs">${field}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-4 bg-blue-50 rounded">
+                        <strong>Taux d'intégration : ${Math.round((presentFields.length / expectedFields.length) * 100)}%</strong>
+                    </div>
+                `;
+                
+                // Affichage détaillé de la première eau
+                sampleData.innerHTML = `
+                    <h3 class="font-bold mb-2">${firstWater.name}</h3>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">📊 Données de base</h4>
+                        <p><strong>Type:</strong> ${firstWater.type} (${firstWater.typeEau})</p>
+                        <p><strong>Propriétaire:</strong> ${firstWater.proprietaire}</p>
+                        <p><strong>Origine:</strong> ${firstWater.region}</p>
+                        <p><strong>Année reconnaissance:</strong> ${firstWater.anneeReconnaissance}</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">🧪 Composition physico-chimique</h4>
+                        <p><strong>pH:</strong> ${firstWater.ph}</p>
+                        <p><strong>Conductivité:</strong> ${firstWater.conductivite} µS/cm</p>
+                        <p><strong>Résidu sec:</strong> ${firstWater.residuSec} mg/L</p>
+                        <p><strong>Température source:</strong> ${firstWater.temperature}°C</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">💧 Minéraux principaux</h4>
+                        <p><strong>Calcium:</strong> ${firstWater.calcium} mg/L</p>
+                        <p><strong>Magnésium:</strong> ${firstWater.magnesium} mg/L</p>
+                        <p><strong>Sodium:</strong> ${firstWater.sodium} mg/L</p>
+                        <p><strong>Bicarbonates:</strong> ${firstWater.bicarbonates} mg/L</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">⚠️ Contaminants (ANSES 2025)</h4>
+                        <p><strong>PFAS total:</strong> ${firstWater.sommePFAS} ng/L</p>
+                        <p><strong>Microplastiques:</strong> ${firstWater.microplasticsParticlesPerLiter} p/L</p>
+                        <p><strong>Pesticides pertinents:</strong> ${firstWater.pesticidesPertinenets} µg/L</p>
+                        <p><strong>Résidus médicamenteux:</strong> ${firstWater.residusMedicamenteux}</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">☢️ Radioactivité</h4>
+                        <p><strong>Uranium:</strong> ${firstWater.uranium} µg/L</p>
+                        <p><strong>Activité alpha:</strong> ${firstWater.activiteAlpha} Bq/L</p>
+                        <p><strong>Radon 222:</strong> ${firstWater.radon} Bq/L</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">🌱 Environnement</h4>
+                        <p><strong>Empreinte carbone:</strong> ${firstWater.empreinteCarbone} kg CO₂/L</p>
+                        <p><strong>Empreinte hydrique:</strong> ${firstWater.empreinteHydrique} L eau/L produit</p>
+                        <p><strong>Taux recyclage:</strong> ${firstWater.tauxRecyclage}%</p>
+                    </div>
+                    
+                    <div class="data-section">
+                        <h4 class="font-semibold">✅ Conformité</h4>
+                        <p><strong>ANSES 2025:</strong> ${firstWater.conformiteANSES}</p>
+                        <p><strong>UE 2008/100/CE:</strong> ${firstWater.conformiteEU}</p>
+                        <p><strong>Laboratoire:</strong> ${firstWater.laboratoireControle}</p>
+                        <p><strong>Date analyse:</strong> ${firstWater.dateAnalyse}</p>
+                    </div>
+                `;
+                
+            } catch (err) {
+                loadingStatus.innerHTML = `<span class="missing">💥 Exception: ${err.message}</span>`;
+                console.error('Erreur complète:', err);
+            }
+        }
+        
+        testIntegration();
+    </script>
+</body>
+</html>

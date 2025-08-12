@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="fr" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BenchEau — Comparateur avancé d'eaux minérales</title>
+    <meta name="description" content="Comparateur complet des eaux minérales françaises avec analyses détaillées, composition minérale, et recommandations d'usage." />
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#0891b2">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="alternate icon" href="/favicon.ico">
+
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+    
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+                400: '#38bdf8', 500: '#0891b2', 600: '#0e7490', 700: '#155e75',
+                800: '#164e63', 900: '#0c4a6e',
+              }
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+              'slide-up': 'slideUp 0.3s ease-out',
+              'float': 'float 3s ease-in-out infinite',
+            }
+          }
+        }
+      }
+      
+      // Dark mode detection and initialization
+      function initDarkMode() {
+        const isDark = localStorage.getItem('darkMode') === 'true' || 
+                      (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      
+      // Initialize dark mode immediately
+      initDarkMode();
+    </script>
+    
+    <style>
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
+      
+      .glass { 
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .dark .glass { 
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.4);
+      }
+      
+      .shadow-soft { box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04); }
+      .shadow-soft-lg { box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 2px 20px -2px rgba(0, 0, 0, 0.04); }
+      
+      .dark .shadow-soft { box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.5), 0 10px 25px -2px rgba(0, 0, 0, 0.3); }
+      .dark .shadow-soft-lg { box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.7), 0 4px 25px -2px rgba(0, 0, 0, 0.4); }
+      
+      .focus-ring:focus {
+        outline: none;
+        ring: 2px;
+        ring-color: #0891b2;
+        ring-opacity: 0.5;
+        border-color: #0891b2;
+      }
+
+      /* Modern card hover effects */
+      .water-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .water-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.15);
+      }
+      .dark .water-card:hover {
+        box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.3);
+      }
+
+      /* Modern responsive grid */
+      .water-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+
+      @media (min-width: 768px) {
+        .water-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+      }
+      @media (min-width: 1024px) {
+        .water-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+      }
+
+      /* Mineral composition bars */
+      .mineral-bar {
+        height: 4px;
+        background: linear-gradient(90deg, #0891b2, #06b6d4);
+        border-radius: 2px;
+        transition: all 0.3s ease;
+      }
+      
+      .dark .mineral-bar {
+        background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+      }
+      
+      /* Fix background gradient repeat */
+      body {
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        background-size: cover;
+        min-height: 100vh;
+      }
+    </style>
+  </head>
+  
+  <body class="min-h-screen font-sans antialiased bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-100">
+    
+
+    <!-- Header -->
+    <header class="relative z-20 glass shadow-soft border-b border-slate-200/50 dark:border-slate-700/50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <a href="index.html" class="flex items-center space-x-4 hover:opacity-80 transition-opacity">
+            <div class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-soft">
+              <span class="text-xl">💧</span>
+            </div>
+            <div>
+              <h1 class="text-xl font-bold text-slate-900 dark:text-white">BenchEau</h1>
+              <p class="text-sm text-slate-600 dark:text-slate-400">Comparateur d'eaux minérales</p>
+            </div>
+          </a>
+          
+          <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="text-sm text-slate-600 dark:text-slate-400">
+                  <span id="count" class="font-bold text-slate-900 dark:text-white">0</span> eaux analysées
+                </span>
+              </div>
+              
+              <!-- Active filters indicator -->
+              <div id="filter-indicator" class="hidden px-2 py-1 bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-300 rounded-full text-xs font-medium">
+                <span id="filter-count">0</span> filtre(s) actif(s)
+              </div>
+            </div>
+            
+            <!-- Navigation menu -->
+            <div class="flex items-center space-x-2">
+              <a href="toutes-les-eaux.html" class="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors focus-ring">
+                📊 Vue tableau
+              </a>
+              <a href="eaux-en-detail.html" class="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors focus-ring">
+                🗂️ Vue cartes
+              </a>
+            </div>
+            
+            <!-- Dark mode toggle -->
+            <button id="dark-mode-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-ring" 
+                    title="Basculer le thème">
+              <span class="dark:hidden">🌙</span>
+              <span class="hidden dark:inline">☀️</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Loading/Error banners -->
+      <div id="loading-banner" class="hidden border-t border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-900 dark:bg-primary-950/40 dark:text-primary-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div class="flex items-center text-sm">
+            <div class="animate-spin w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full mr-3"></div>
+            <span>Chargement des analyses d'eaux minérales…</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="error-banner" class="hidden border-t border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div class="flex items-center text-sm">
+            <span class="text-red-600 mr-2">⚠️</span>
+            <div role="alert"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 py-8 ml-0 transition-all duration-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Stats Cards -->
+        <div class="mb-8 animate-fade-in">
+          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div class="glass rounded-xl p-4 text-center animate-slide-up">
+              <div class="text-2xl mb-2">📊</div>
+              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</div>
+              <div id="stats-total" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
+            </div>
+            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.1s">
+              <div class="text-2xl mb-2">💧</div>
+              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Plates</div>
+              <div id="stats-plates" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
+            </div>
+            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.2s">
+              <div class="text-2xl mb-2">🫧</div>
+              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Pétillantes</div>
+              <div id="stats-petillantes" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
+            </div>
+            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.3s">
+              <div class="text-2xl mb-2">⚗️</div>
+              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">pH Moyen</div>
+              <div id="stats-ph" class="text-xl font-bold text-slate-900 dark:text-white">-</div>
+            </div>
+            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.4s">
+              <div class="text-2xl mb-2">🧪</div>
+              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">RS Moyen</div>
+              <div id="stats-rs" class="text-xl font-bold text-slate-900 dark:text-white">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filtres Section -->
+        <div class="mb-6 animate-fade-in">
+          <div class="glass rounded-xl p-4 shadow-soft">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div class="flex items-center space-x-2">
+                <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                  <span class="text-xs">🔍</span>
+                </div>
+                <span class="text-sm font-medium text-slate-900 dark:text-white">Filtres :</span>
+              </div>
+              
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                <input id="search" type="text" placeholder="Recherche..." 
+                       class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring" />
+                
+                <select id="filter-mineralization" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring">
+                  <option value="">Toute minéralisation</option>
+                  <option value="tres-faiblement-mineralisee">Très faible</option>
+                  <option value="faiblement-mineralisee">Faible</option>
+                  <option value="moyennement-mineralisee">Modérée</option>
+                  <option value="riche-en-sels-mineraux">Riche</option>
+                </select>
+                
+                <select id="filter-usage" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring">
+                  <option value="">Tous usages</option>
+                  <option value="nourrissons">👶 Nourrissons</option>
+                  <option value="enfants">🧒 Enfants</option>
+                  <option value="consommation-quotidienne">🏠 Quotidien</option>
+                  <option value="digestion">🌿 Digestion</option>
+                  <option value="apport-mineraux">💪 Minéraux</option>
+                  <option value="sport">🏃 Sport</option>
+                </select>
+                
+                <div class="flex items-center space-x-2">
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input id="filter-flat" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
+                    <span class="text-sm">💧</span>
+                  </label>
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input id="filter-sparkling" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
+                    <span class="text-sm">🫧</span>
+                  </label>
+                  <button id="reset-filters" class="px-2 py-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 text-xs font-medium transition-colors" title="Réinitialiser">
+                    🔄
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top 10 Section -->
+        <div class="mb-8 animate-fade-in">
+          <div class="glass rounded-xl p-6 shadow-soft">
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span class="text-sm text-white">📊</span>
+                </div>
+                <div>
+                  <h2 class="text-lg font-bold text-slate-900 dark:text-white">Top 10 des meilleures eaux</h2>
+                  <p class="text-xs text-slate-600 dark:text-slate-400">Classement interactif - utilisez les filtres pour affiner</p>
+                </div>
+              </div>
+              
+              <div class="flex items-center space-x-2">
+                <a href="toutes-les-eaux.html" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg transition-colors focus-ring">
+                  📊 Vue tableau
+                </a>
+                <a href="eaux-en-detail.html" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg transition-colors focus-ring">
+                  🗂️ Vue cartes
+                </a>
+              </div>
+            </div>
+            
+            <div id="top5-chart" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <!-- Chart will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Cards -->
+        <div class="grid md:grid-cols-2 gap-6 animate-fade-in">
+          <!-- Vue tableau -->
+          <a href="toutes-les-eaux.html" class="group glass rounded-xl p-6 shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="text-white text-lg">📊</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">Vue tableau</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Tableau complet avec tri et recherche</p>
+              </div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Accédez à toutes les eaux dans un tableau professionnel avec fonctions de tri, recherche et comparaison détaillée.
+            </p>
+          </a>
+          
+          <!-- Vue en cartes -->
+          <a href="eaux-en-detail.html" class="group glass rounded-xl p-6 shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="flex items-center space-x-4 mb-4">
+              <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                <span class="text-white text-lg">🗂️</span>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">Vue en cartes</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400">Affichage visuel détaillé</p>
+              </div>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Explorez les eaux sous forme de cartes interactives avec composition minérale et filtres avancés.
+            </p>
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 glass border-t border-slate-200/50 dark:border-slate-700/50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="flex flex-col md:flex-row items-center justify-between">
+          <div class="text-sm text-slate-600 dark:text-slate-400 mb-4 md:mb-0">
+            © 2024 BenchEau. Tous droits réservés.
+          </div>
+          <div class="text-sm text-slate-600 dark:text-slate-400">
+            Fait avec ❤️ par <span class="font-semibold text-slate-900 dark:text-white">Wasabii_boy</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Water Detail Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 p-4 overflow-y-auto">
+      <div class="min-h-screen flex items-center justify-center">
+        <div class="glass rounded-2xl shadow-soft-lg max-w-4xl w-full mx-auto animate-slide-up">
+          <div class="p-6">
+            <div class="flex items-start justify-between mb-6">
+              <div class="flex items-center space-x-4">
+                <div id="modal-icon" class="text-3xl"></div>
+                <div>
+                  <h2 id="modal-title" class="text-2xl font-bold text-slate-900 dark:text-white"></h2>
+                  <p id="modal-subtitle" class="text-slate-600 dark:text-slate-400"></p>
+                </div>
+              </div>
+              <button id="modal-close" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors">
+                <span class="text-lg">×</span>
+              </button>
+            </div>
+            
+            <div id="modal-content" class="space-y-6">
+              <!-- Content filled by JavaScript -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-8 max-w-md text-center">
+          <span class="text-4xl mb-4 block">⚠️</span>
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">JavaScript requis</h3>
+          <p class="text-slate-600 dark:text-slate-400">Cette application nécessite JavaScript pour fonctionner.</p>
+        </div>
+      </div>
+    </noscript>
+    
+    <script type="module" src="./js/main.js?v=17"></script>
+  </body>
+</html>
