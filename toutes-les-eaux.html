@@ -84,24 +84,68 @@
         border-color: #0891b2;
       }
 
-      /* Water table styles */
+      /* Enhanced water table styles */
       .water-table {
         border-collapse: separate;
         border-spacing: 0;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       }
       
       .water-table th {
         position: sticky;
         top: 0;
         z-index: 10;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      }
+      
+      .dark .water-table th {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      }
+      
+      .water-table tbody tr {
+        transition: all 0.2s ease;
+      }
+      
+      .water-table tbody tr:nth-child(even) {
+        background-color: rgba(248, 250, 252, 0.5);
+      }
+      
+      .dark .water-table tbody tr:nth-child(even) {
+        background-color: rgba(15, 23, 42, 0.3);
       }
       
       .water-table tr:hover {
-        background-color: rgba(8, 145, 178, 0.05);
+        background: linear-gradient(90deg, rgba(8, 145, 178, 0.05) 0%, rgba(8, 145, 178, 0.02) 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       
       .dark .water-table tr:hover {
-        background-color: rgba(8, 145, 178, 0.1);
+        background: linear-gradient(90deg, rgba(8, 145, 178, 0.1) 0%, rgba(8, 145, 178, 0.05) 100%);
+      }
+      
+      /* Mobile responsive table */
+      @media (max-width: 768px) {
+        .water-table {
+          font-size: 0.875rem;
+        }
+        .water-table th,
+        .water-table td {
+          padding: 0.75rem 0.5rem;
+        }
+        .water-table th:nth-child(n+6),
+        .water-table td:nth-child(n+6) {
+          display: none;
+        }
+      }
+      
+      @media (max-width: 640px) {
+        .water-table th:nth-child(n+5),
+        .water-table td:nth-child(n+5) {
+          display: none;
+        }
       }
       
       /* Fix background gradient repeat */
@@ -175,36 +219,101 @@
     <main class="flex-1 py-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <!-- Stats & Filters -->
-        <div class="mb-6 glass rounded-xl p-4 shadow-soft">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <!-- Stats -->
-            <div class="flex items-center space-x-6">
-              <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                  <span id="count" class="font-bold text-slate-900 dark:text-white">0</span> eaux affichées
-                </span>
+        <!-- Enhanced Stats & Filters -->
+        <div class="mb-6 glass rounded-xl p-6 shadow-soft">
+          <!-- Stats Header -->
+          <div class="flex items-center space-x-3 mb-6">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <span class="text-white text-lg">📊</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-slate-900 dark:text-white">Tableau complet</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                <span id="count" class="font-semibold text-slate-900 dark:text-white">0</span> eaux analysées avec leurs données complètes
+              </p>
+            </div>
+          </div>
+          
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <!-- Quality Distribution Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                <div class="text-sm text-green-800 dark:text-green-300 font-semibold">Excellente</div>
+                <div id="excellent-count" class="text-2xl font-bold text-green-900 dark:text-green-200">0</div>
               </div>
               
-              <div class="text-sm text-slate-500 dark:text-slate-400">
-                Score moyen: <span id="avg-score" class="font-semibold text-slate-900 dark:text-white">-</span>/100
+              <div class="text-center p-3 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                <div class="text-sm text-blue-800 dark:text-blue-300 font-semibold">Bonne</div>
+                <div id="good-count" class="text-2xl font-bold text-blue-900 dark:text-blue-200">0</div>
+              </div>
+              
+              <div class="text-center p-3 bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800">
+                <div class="text-sm text-yellow-800 dark:text-yellow-300 font-semibold">Correcte</div>
+                <div id="fair-count" class="text-2xl font-bold text-yellow-900 dark:text-yellow-200">0</div>
+              </div>
+              
+              <div class="text-center p-3 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                <div class="text-sm text-orange-800 dark:text-orange-300 font-semibold">À éviter</div>
+                <div id="poor-count" class="text-2xl font-bold text-orange-900 dark:text-orange-200">0</div>
               </div>
             </div>
             
-            <!-- Quick filters -->
-            <div class="flex items-center space-x-3">
-              <select id="sort-by" class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 focus-ring">
-                <option value="score-desc">Score (meilleur d'abord)</option>
-                <option value="score-asc">Score (moins bon d'abord)</option>
-                <option value="name-asc">Nom (A-Z)</option>
-                <option value="name-desc">Nom (Z-A)</option>
-                <option value="ph-asc">pH croissant</option>
-                <option value="ph-desc">pH décroissant</option>
-              </select>
-              
-              <input id="search" type="text" placeholder="Rechercher une eau..." 
-                     class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 focus-ring w-64" />
+            <!-- Filters & Controls -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <!-- Filters -->
+              <div class="flex flex-wrap items-center gap-3">
+                <!-- Type filters -->
+                <div class="flex items-center space-x-2 text-sm">
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input id="filter-flat" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
+                    <span>💧</span>
+                  </label>
+                  <label class="flex items-center space-x-1 cursor-pointer">
+                    <input id="filter-sparkling" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
+                    <span>🫧</span>
+                  </label>
+                </div>
+
+                <!-- Mineralization filter -->
+                <select id="filter-mineralization" class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 focus-ring">
+                  <option value="">Toute minéralisation</option>
+                  <option value="tres-faiblement-mineralisee">Très faible (&lt; 50 mg/L)</option>
+                  <option value="faiblement-mineralisee">Faible (≤ 500 mg/L)</option>
+                  <option value="moyennement-mineralisee">Modérée (≤ 1500 mg/L)</option>
+                  <option value="riche-en-sels-mineraux">Riche (&gt; 1500 mg/L)</option>
+                </select>
+
+                <!-- Usage filter -->
+                <select id="filter-usage" class="text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 focus-ring">
+                  <option value="">Tout usage</option>
+                  <option value="nourrissons">👶 Nourrissons</option>
+                  <option value="enfants">🧒 Enfants</option>
+                  <option value="consommation-quotidienne">🏠 Quotidien</option>
+                  <option value="digestion">🌿 Digestion</option>
+                  <option value="apport-mineraux">💪 Minéraux</option>
+                  <option value="sport">🏃 Sport</option>
+                </select>
+
+                <!-- Reset button -->
+                <button id="reset-filters" class="text-xs px-2 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors focus-ring rounded">
+                  ↻ Reset
+                </button>
+              </div>
+
+              <!-- Sort & Search -->
+              <div class="flex items-center space-x-3">
+                <select id="sort-by" class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 focus-ring min-w-[180px]">
+                  <option value="quality-desc">Qualité (meilleure d'abord)</option>
+                  <option value="name-asc">Nom (A-Z)</option>
+                  <option value="sodium-asc">Moins de sodium</option>
+                  <option value="ph-ideal">pH idéal d'abord</option>
+                  <option value="minerals-desc">Plus de minéraux</option>
+                  <option value="purity-desc">Plus pure d'abord</option>
+                </select>
+                
+                <input id="search" type="text" placeholder="Rechercher une eau..." 
+                       class="text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 focus-ring w-64" />
+              </div>
             </div>
           </div>
         </div>
@@ -214,29 +323,77 @@
           <div class="overflow-x-auto">
             <table class="water-table w-full">
               <thead>
-                <tr class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">#</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Eau</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Score</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">pH</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Sodium</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Microplastiques</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Résidu sec</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Points forts</th>
+                <tr class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-b border-slate-200 dark:border-slate-600">
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">#</th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide min-w-[200px]">
+                    <div class="flex items-center space-x-1">
+                      <span>💧</span>
+                      <span>Eau minérale</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>⭐</span>
+                      <span>Qualité</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>⚗️</span>
+                      <span>pH</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>🧂</span>
+                      <span>Sodium</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>🔬</span>
+                      <span>Pureté</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>⛏️</span>
+                      <span>Minéraux</span>
+                    </div>
+                  </th>
+                  <th class="px-4 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                    <div class="flex items-center space-x-1">
+                      <span>🎯</span>
+                      <span>Usage</span>
+                    </div>
+                  </th>
                 </tr>
               </thead>
-              <tbody id="waters-table-body" class="divide-y divide-slate-200 dark:divide-slash-700">
+              <tbody id="waters-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
                 <!-- Table content will be populated by JavaScript -->
               </tbody>
             </table>
           </div>
         </div>
         
-        <!-- Empty State -->
-        <div id="empty-state" class="hidden text-center py-16">
-          <div class="text-6xl mb-4">🔍</div>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">Aucune eau trouvée</h3>
-          <p class="text-slate-600 dark:text-slate-400">Essayez d'ajuster votre recherche</p>
+        <!-- Enhanced Empty State -->
+        <div id="empty-state" class="hidden text-center py-20">
+          <div class="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center mx-auto mb-8 shadow-soft">
+            <span class="text-6xl">🔍</span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 dark:text-white mb-4">Aucune eau ne correspond</h3>
+          <p class="text-slate-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">
+            Aucune eau minérale ne correspond aux critères sélectionnés. Ajustez vos filtres pour découvrir d'autres options.
+          </p>
+          
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <button id="reset-all-filters" class="px-8 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg font-semibold">
+              🔄 Réinitialiser tous les filtres
+            </button>
+            <button id="show-all-waters" class="px-8 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors font-semibold">
+              💧 Voir toutes les eaux
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -291,6 +448,6 @@
       </div>
     </noscript>
     
-    <script type="module" src="./js/toutes-les-eaux.js?v=1"></script>
+    <script type="module" src="./js/toutes-les-eaux.js?v=17"></script>
   </body>
 </html>

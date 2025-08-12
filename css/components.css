@@ -1,0 +1,491 @@
+/* BenchEau Enhanced Component System - Mobile-First Design */
+
+/* ===========================================
+   DESIGN TOKENS
+   =========================================== */
+:root {
+  /* Contextual Quality Colors */
+  --quality-excellent-from: #10b981;
+  --quality-excellent-to: #059669;
+  --quality-good-from: #22c55e;
+  --quality-good-to: #16a34a;
+  --quality-fair-from: #eab308;
+  --quality-fair-to: #ca8a04;
+  --quality-poor-from: #f97316;
+  --quality-poor-to: #ea580c;
+  --quality-bad-from: #ef4444;
+  --quality-bad-to: #dc2626;
+  
+  /* Safety Badge Colors */
+  --safety-baby: #fef3c7;
+  --safety-baby-text: #92400e;
+  --safety-baby-border: #fcd34d;
+  --safety-elderly: #ddd6fe;
+  --safety-elderly-text: #6b21a8;
+  --safety-elderly-border: #c4b5fd;
+  --safety-general: #dcfce7;
+  --safety-general-text: #166534;
+  --safety-general-border: #86efac;
+  
+  /* Spacing Scale (4px base) */
+  --space-xs: 0.25rem; /* 4px */
+  --space-sm: 0.5rem;  /* 8px */
+  --space-md: 1rem;    /* 16px */
+  --space-lg: 1.5rem;  /* 24px */
+  --space-xl: 2rem;    /* 32px */
+  --space-2xl: 3rem;   /* 48px */
+  
+  /* Border Radius Scale */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-2xl: 1.5rem;   /* 24px */
+  
+  /* Typography Scale */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+}
+
+/* ===========================================
+   CONTEXTUAL QUALITY SYSTEM
+   =========================================== */
+
+/* Quality Rating Badges */
+.quality-badge {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold;
+  transition: all 0.2s ease;
+}
+
+.quality-excellent {
+  background: linear-gradient(135deg, var(--quality-excellent-from), var(--quality-excellent-to));
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.quality-good {
+  background: linear-gradient(135deg, var(--quality-good-from), var(--quality-good-to));
+  color: white;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.quality-fair {
+  background: linear-gradient(135deg, var(--quality-fair-from), var(--quality-fair-to));
+  color: white;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.3);
+}
+
+.quality-poor {
+  background: linear-gradient(135deg, var(--quality-poor-from), var(--quality-poor-to));
+  color: white;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+
+.quality-bad {
+  background: linear-gradient(135deg, var(--quality-bad-from), var(--quality-bad-to));
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Quality Indicators with Accessibility */
+.quality-indicator {
+  @apply relative inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold;
+  transition: all 0.2s ease;
+}
+
+.quality-indicator::before {
+  content: '';
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.quality-indicator:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ===========================================
+   SAFETY BADGES FOR VULNERABLE GROUPS
+   =========================================== */
+
+.safety-badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border;
+  transition: all 0.2s ease;
+}
+
+.safety-baby {
+  background: var(--safety-baby);
+  color: var(--safety-baby-text);
+  border-color: var(--safety-baby-border);
+}
+
+.safety-elderly {
+  background: var(--safety-elderly);
+  color: var(--safety-elderly-text);
+  border-color: var(--safety-elderly-border);
+}
+
+.safety-general {
+  background: var(--safety-general);
+  color: var(--safety-general-text);
+  border-color: var(--safety-general-border);
+}
+
+.dark .safety-baby {
+  background: rgba(146, 64, 14, 0.2);
+  color: var(--safety-baby-border);
+  border-color: rgba(252, 211, 77, 0.3);
+}
+
+.dark .safety-elderly {
+  background: rgba(107, 33, 168, 0.2);
+  color: var(--safety-elderly-border);
+  border-color: rgba(196, 181, 253, 0.3);
+}
+
+.dark .safety-general {
+  background: rgba(22, 101, 52, 0.2);
+  color: var(--safety-general-border);
+  border-color: rgba(134, 239, 172, 0.3);
+}
+
+.safety-badge:hover {
+  transform: scale(1.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===========================================
+   PROGRESSIVE DISCLOSURE COMPONENTS
+   =========================================== */
+
+.water-card-enhanced {
+  @apply glass rounded-2xl p-6 cursor-pointer transition-all duration-300;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.water-card-enhanced:hover {
+  @apply -translate-y-1 scale-[1.02];
+  box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.15);
+}
+
+.dark .water-card-enhanced:hover {
+  box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.3);
+}
+
+/* Expandable Details */
+.details-expandable {
+  @apply overflow-hidden transition-all duration-300;
+  max-height: 0;
+  opacity: 0;
+}
+
+.details-expandable.expanded {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Parameter Pills */
+.parameter-pill {
+  @apply inline-flex items-center gap-1 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-xs font-medium text-slate-700 dark:text-slate-300;
+  transition: all 0.2s ease;
+}
+
+.parameter-pill.warning {
+  @apply bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 ring-1 ring-orange-300 dark:ring-orange-700;
+}
+
+.parameter-pill.ideal {
+  @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 ring-1 ring-green-300 dark:ring-green-700;
+}
+
+/* ===========================================
+   MOBILE-FIRST MODAL SYSTEM
+   =========================================== */
+
+.modal-enhanced {
+  @apply fixed inset-0 bg-black/60 z-50 p-4 overflow-y-auto backdrop-blur-sm;
+  animation: modal-fade-in 0.3s ease-out;
+}
+
+.modal-content-enhanced {
+  @apply glass rounded-2xl shadow-2xl max-w-4xl w-full mx-auto my-8;
+  animation: modal-slide-up 0.3s ease-out;
+  min-height: calc(100vh - 4rem);
+}
+
+@media (max-width: 768px) {
+  .modal-content-enhanced {
+    @apply m-0 rounded-t-2xl rounded-b-none;
+    min-height: 100vh;
+    margin-top: 2rem;
+  }
+}
+
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-slide-up {
+  from { 
+    opacity: 0; 
+    transform: translateY(2rem) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* Modal Sections */
+.modal-section {
+  @apply space-y-4 p-6 border-b border-slate-200 dark:border-slate-700 last:border-b-0;
+}
+
+.modal-section-title {
+  @apply text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2;
+}
+
+.modal-section-icon {
+  @apply w-6 h-6 rounded-lg flex items-center justify-center text-sm;
+}
+
+/* ===========================================
+   MOBILE-OPTIMIZED FILTER PANEL
+   =========================================== */
+
+.filter-panel-mobile {
+  @apply fixed inset-x-0 bottom-0 glass shadow-2xl z-40 rounded-t-3xl;
+  height: 75vh;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-panel-mobile.show {
+  transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+  .filter-panel-mobile {
+    @apply fixed left-0 top-0 bottom-0 w-80 rounded-t-none rounded-r-3xl;
+    height: 100vh;
+    transform: translateX(-100%);
+  }
+  
+  .filter-panel-mobile.show {
+    transform: translateX(0);
+  }
+}
+
+/* Filter Panel Handle */
+.filter-panel-handle {
+  @apply flex justify-center pt-4 pb-2 cursor-pointer;
+}
+
+.filter-panel-handle::after {
+  content: '';
+  @apply w-12 h-1 bg-slate-300 dark:bg-slate-600 rounded-full;
+}
+
+/* Quick Filter Buttons */
+.quick-filter-btn {
+  @apply p-4 rounded-xl border-2 border-transparent transition-all duration-200 text-left;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+}
+
+.quick-filter-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.quick-filter-btn.active {
+  @apply ring-2 ring-primary-500 border-primary-200;
+  box-shadow: 0 4px 20px rgba(8, 145, 178, 0.2);
+}
+
+.dark .quick-filter-btn {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4));
+}
+
+/* ===========================================
+   ENHANCED TABLE COMPONENTS
+   =========================================== */
+
+.table-enhanced {
+  @apply w-full border-collapse rounded-2xl overflow-hidden shadow-lg;
+  border-spacing: 0;
+}
+
+.table-enhanced thead {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.dark .table-enhanced thead {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+.table-enhanced th {
+  @apply px-6 py-4 text-left text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.table-enhanced tbody tr {
+  @apply transition-all duration-200;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.table-enhanced tbody tr:hover {
+  background: linear-gradient(90deg, rgba(8, 145, 178, 0.05) 0%, rgba(8, 145, 178, 0.02) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark .table-enhanced tbody tr:hover {
+  background: linear-gradient(90deg, rgba(8, 145, 178, 0.1) 0%, rgba(8, 145, 178, 0.05) 100%);
+}
+
+.table-enhanced td {
+  @apply px-6 py-4 text-sm text-slate-900 dark:text-slate-100;
+}
+
+/* Mobile Table Responsiveness */
+@media (max-width: 768px) {
+  .table-enhanced {
+    @apply text-sm;
+  }
+  
+  .table-enhanced th,
+  .table-enhanced td {
+    @apply px-3 py-3;
+  }
+  
+  .table-enhanced .hide-mobile {
+    @apply hidden;
+  }
+}
+
+@media (max-width: 640px) {
+  .table-enhanced .hide-sm {
+    @apply hidden;
+  }
+}
+
+/* ===========================================
+   LOADING & EMPTY STATES
+   =========================================== */
+
+.loading-skeleton {
+  @apply bg-gradient-to-r from-slate-200 via-slate-300 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700 rounded;
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.empty-state-enhanced {
+  @apply text-center py-20;
+}
+
+.empty-state-icon {
+  @apply w-32 h-32 mx-auto mb-8 rounded-full flex items-center justify-center shadow-lg;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.dark .empty-state-icon {
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+}
+
+/* ===========================================
+   ACCESSIBILITY IMPROVEMENTS
+   =========================================== */
+
+/* Focus ring system */
+.focus-enhanced:focus {
+  @apply outline-none ring-2 ring-primary-500 ring-opacity-50 ring-offset-2 ring-offset-white dark:ring-offset-slate-900;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .quality-excellent,
+  .quality-good,
+  .quality-fair,
+  .quality-poor,
+  .quality-bad {
+    filter: contrast(1.2);
+    font-weight: 700;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===========================================
+   UTILITY CLASSES
+   =========================================== */
+
+/* Gradient backgrounds */
+.bg-quality-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+}
+
+.bg-family-gradient {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.bg-sport-gradient {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+}
+
+.bg-health-gradient {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+}
+
+/* Text utilities */
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+/* Interactive states */
+.interactive:hover {
+  @apply scale-105;
+}
+
+.interactive:active {
+  @apply scale-95;
+}
+
+/* Social media optimized components */
+.shareable-card {
+  aspect-ratio: 9 / 16; /* TikTok/Instagram Stories */
+  @apply bg-gradient-to-br from-white via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900;
+}
+
+@media (min-width: 768px) {
+  .shareable-card {
+    aspect-ratio: 16 / 9; /* Landscape for desktop */
+  }
+}

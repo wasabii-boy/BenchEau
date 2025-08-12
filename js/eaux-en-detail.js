@@ -1,5 +1,5 @@
 // eaux-en-detail.js — Page dédiée pour afficher toutes les eaux en grille
-import { loadData } from './data.js?v=15';
+import { loadData } from './data.js?v=17';
 
 const state = {
   data: [],

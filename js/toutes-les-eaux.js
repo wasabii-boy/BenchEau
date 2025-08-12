@@ -1,189 +1,29 @@
 // toutes-les-eaux.js — Page dédiée pour afficher toutes les eaux
-import { loadData } from './data.js?v=16';
+import { loadData } from './data.js?v=17';
+import { calculateWaterScore, getQualityRating, getSafetyBadges, fmt, sanitizeHTML } from './utils/scoring.js?v=1';
 
 const state = {
   data: [],
   filtered: [],
   sortBy: 'score-desc',
-  query: ''
+  filters: {
+    type: { plate: true, petillante: true },
+    query: '',
+    mineralization: '',
+    usage: ''
+  }
 };
 
 function qs(id) { return document.getElementById(id); }
 
-function fmt(v, decimals = 1) {
-  if (v === undefined || v === null || Number.isNaN(v)) return '-';
-  if (typeof v === 'number') {
-    return Number.isInteger(v) ? String(v) : v.toFixed(decimals);
-  }
-  return String(v);
-}
+// fmt function now imported from utils/scoring.js
 
 function mean(arr) {
   const validNumbers = arr.filter(n => typeof n === 'number' && !isNaN(n));
   return validNumbers.length > 0 ? validNumbers.reduce((sum, n) => sum + n, 0) / validNumbers.length : undefined;
 }
 
-// Algorithme de scoring pour déterminer les meilleures eaux - ANSES 2025
-function calculateWaterScore(water) {
-  let score = 0;
-  let factors = 0;
-
-  // Score pH (optimal: 6.5-8.5)
-  if (water.ph) {
-    if (water.ph >= 6.5 && water.ph <= 8.5) {
-      score += 20;
-    } else if (water.ph >= 6.0 && water.ph <= 9.0) {
-      score += 10;
-    }
-    factors++;
-  }
-
-  // Score sodium (plus c'est bas, mieux c'est, mais pas 0)
-  if (water.sodium !== undefined && water.sodium !== null) {
-    if (water.sodium <= 20) {
-      score += 20; // Excellent pour consommation quotidienne
-    } else if (water.sodium <= 50) {
-      score += 15;
-    } else if (water.sodium <= 200) {
-      score += 10;
-    } else {
-      score += 0; // Trop salé
-    }
-    factors++;
-  }
-
-  // Score microplastiques (plus c'est bas, mieux c'est)
-  if (water.microplasticsParticlesPerLiter !== undefined) {
-    if (water.microplasticsParticlesPerLiter <= 1) {
-      score += 20; // Excellent
-    } else if (water.microplasticsParticlesPerLiter <= 3) {
-      score += 15;
-    } else if (water.microplasticsParticlesPerLiter <= 5) {
-      score += 10;
-    } else {
-      score += 5;
-    }
-    factors++;
-  }
-
-  // Score minéralisation (modérée est optimale)
-  if (water.residuSec) {
-    if (water.residuSec >= 150 && water.residuSec <= 500) {
-      score += 20; // Minéralisation idéale
-    } else if (water.residuSec >= 50 && water.residuSec <= 1000) {
-      score += 15;
-    } else if (water.residuSec < 50) {
-      score += 10; // Trop faiblement minéralisée
-    } else {
-      score += 5; // Trop minéralisée
-    }
-    factors++;
-  }
-
-  // Score nitrates (plus c'est bas, mieux c'est)
-  if (water.nitrates !== undefined && water.nitrates !== null) {
-    if (water.nitrates <= 2) {
-      score += 15;
-    } else if (water.nitrates <= 10) {
-      score += 10;
-    } else if (water.nitrates <= 25) {
-      score += 5;
-    }
-    factors++;
-  }
-
-  // Score PFAS (contaminants émergents - CRITIQUE)
-  if (water.sommePFAS !== undefined && water.sommePFAS !== null) {
-    if (water.sommePFAS <= 10) {
-      score += 20; // Très faible contamination PFAS
-    } else if (water.sommePFAS <= 50) {
-      score += 15;
-    } else if (water.sommePFAS <= 100) {
-      score += 10;
-    } else {
-      score += 0; // Contamination élevée
-    }
-    factors++;
-  }
-
-  // Score pesticides (métabolites pertinents)
-  if (water.pesticidesPertinenets !== undefined && water.pesticidesPertinenets !== null) {
-    if (water.pesticidesPertinenets <= 0.01) {
-      score += 15; // Très peu de pesticides
-    } else if (water.pesticidesPertinenets <= 0.1) {
-      score += 10;
-    } else if (water.pesticidesPertinenets <= 0.5) {
-      score += 5;
-    }
-    factors++;
-  }
-
-  // Score conformité ANSES (nouveau critère 2025)
-  if (water.conformiteANSES) {
-    if (water.conformiteANSES.toLowerCase().includes('conforme')) {
-      score += 15; // Conforme aux nouvelles normes ANSES
-    }
-    factors++;
-  }
-
-  // Score radioactivité (uranium comme indicateur)
-  if (water.uranium !== undefined && water.uranium !== null) {
-    if (water.uranium <= 5) {
-      score += 10; // Très faible radioactivité
-    } else if (water.uranium <= 15) {
-      score += 5;
-    }
-    factors++;
-  }
-
-  // Bonus calcium/magnésium (bons pour la santé)
-  if (water.calcium && water.calcium >= 50 && water.calcium <= 150) {
-    score += 10;
-  }
-  if (water.magnesium && water.magnesium >= 10 && water.magnesium <= 50) {
-    score += 10;
-  }
-
-  // Bonus pour certifications
-  if (water.certifications && water.certifications.toLowerCase().includes('iso')) {
-    score += 5;
-  }
-
-  // Malus pour restrictions sanitaires
-  if (water.restrictions && !water.restrictions.toLowerCase().includes('aucune')) {
-    score -= 10;
-  }
-
-  // Malus pour polluants détectés
-  if (water.bisphenols && water.bisphenols > 0.1) {
-    score -= 10; // Présence de bisphénols
-  }
-  
-  if (water.phtalates && water.phtalates > 0.1) {
-    score -= 10; // Présence de phtalates
-  }
-  
-  if (water.residusMedicamenteux && water.residusMedicamenteux !== 'Négatif') {
-    score -= 15; // Résidus médicamenteux détectés
-  }
-
-  // Bonus pour conformité européenne
-  if (water.conformiteEU && water.conformiteEU.toLowerCase().includes('conforme')) {
-    score += 5;
-  }
-
-  // Ajout de variation basée sur les valeurs exactes pour éviter les ex æquo
-  let variation = 0;
-  if (water.ph) variation += (water.ph - 7) * 0.1; // Bonus/malus pH précis
-  if (water.sodium !== undefined) variation -= water.sodium * 0.01; // Malus sodium précis
-  if (water.calcium) variation += Math.min(water.calcium * 0.01, 2); // Bonus calcium modéré
-  
-  // Normaliser le score sur 100 avec variation
-  // Score max théorique: 20+20+20+20+15+20+15+15+10+10+10+5+5 = 185 points + bonus
-  const maxPossible = 200;
-  const baseScore = Math.min(100, Math.round((score / maxPossible) * 100));
-  return Math.max(0, Math.min(100, Math.round(baseScore + variation)));
-}
+// calculateWaterScore is now imported from utils/scoring.js
 
 function getQualityIndicator(value, thresholds, reverse = false) {
   if (value === undefined || value === null || isNaN(value)) return '⚪';
@@ -206,23 +46,36 @@ function getStrengths(water) {
   return strengths;
 }
 
-function applySortAndFilter() {
-  const query = state.query.toLowerCase();
+function applyFilters() {
+  readControls();
+  const { type, query, mineralization, usage } = state.filters;
   
-  // Filtrer par recherche
   state.filtered = state.data.filter(water => {
-    if (!query) return true;
+    // Type filter
+    const typeOk = (water.type === 'plate' && type.plate) || (water.type === 'petillante' && type.petillante);
+    
+    // Text search
     const searchText = `${water.name} ${water.region || ''} ${water.proprietaire || ''}`.toLowerCase();
-    return searchText.includes(query);
+    const queryOk = !query || searchText.includes(query.toLowerCase());
+    
+    // Mineralization filter
+    const mineralizationOk = !mineralization || (water.categories?.mineralization === mineralization);
+    
+    // Usage filter
+    const usageOk = !usage || (water.categories?.usage && Array.isArray(water.categories.usage) && water.categories.usage.includes(usage));
+    
+    return typeOk && queryOk && mineralizationOk && usageOk;
   });
 
-  // Calculer les scores et trier
+  // Calculer les scores
   state.filtered = state.filtered.map(water => ({
     ...water,
     score: calculateWaterScore(water)
   }));
+}
 
-  // Appliquer le tri
+function applySort() {
+  // Appliquer le tri après filtrage
   switch (state.sortBy) {
     case 'score-desc':
       state.filtered.sort((a, b) => b.score - a.score);
@@ -243,6 +96,14 @@ function applySortAndFilter() {
       state.filtered.sort((a, b) => (b.ph || 0) - (a.ph || 0));
       break;
   }
+}
+
+function readControls() {
+  state.filters.type.plate = qs('filter-flat')?.checked ?? true;
+  state.filters.type.petillante = qs('filter-sparkling')?.checked ?? true;
+  state.filters.query = (qs('search')?.value || '').trim();
+  state.filters.mineralization = qs('filter-mineralization')?.value || '';
+  state.filters.usage = qs('filter-usage')?.value || '';
 }
 
 function renderTable() {
@@ -631,7 +492,8 @@ function showWaterDetail(water) {
 }
 
 function render() {
-  applySortAndFilter();
+  applyFilters();
+  applySort();
   updateStats();
   renderTable();
 }
@@ -662,6 +524,14 @@ function bindControls() {
     });
   }
 
+  // Filter controls
+  ['filter-flat', 'filter-sparkling', 'search', 'filter-mineralization', 'filter-usage'].forEach(id => {
+    const el = qs(id);
+    if (el) {
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderDebounced);
+    }
+  });
+
   // Sort controls
   const sortBy = qs('sort-by');
   if (sortBy) {
@@ -671,12 +541,16 @@ function bindControls() {
     });
   }
 
-  // Search control
-  const search = qs('search');
-  if (search) {
-    search.addEventListener('input', (e) => {
-      state.query = e.target.value;
-      renderDebounced();
+  // Reset filters
+  const resetBtn = qs('reset-filters');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      qs('filter-flat').checked = true;
+      qs('filter-sparkling').checked = true;
+      qs('search').value = '';
+      qs('filter-mineralization').value = '';
+      qs('filter-usage').value = '';
+      render();
     });
   }
 
