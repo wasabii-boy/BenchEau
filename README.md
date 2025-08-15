@@ -2,12 +2,12 @@
 
 **Comparateur d'eaux minérales françaises avec données ANSES 2025**
 
-BenchEau est une application web moderne qui analyse et compare 81 eaux minérales françaises selon 52 critères de qualité basés sur les données officielles ANSES 2025.
+BenchEau est une application web moderne qui analyse et compare 101 eaux minérales françaises selon 52 critères de qualité basés sur les données officielles ANSES 2025.
 
 ## ✨ Fonctionnalités
 
 ### 🏠 Vue d'ensemble
-- **81 eaux analysées** : 65 eaux minérales naturelles + 16 eaux de source
+- **101 eaux analysées** : 65 eaux minérales naturelles + 16 eaux de source + 20 eaux supplémentaires
 - **52 critères de qualité** : composition minérale, PFAS, microplastiques, impact environnemental
 - **Système de scoring** : notation de 0 à 100 basée sur les standards ANSES 2025
 
@@ -116,7 +116,7 @@ MIT License - voir le fichier LICENSE pour les détails.
 
 ## 📊 Statistiques
 
-- **81 eaux** analysées
+- **101 eaux** analysées
 - **52 critères** par eau
 - **6 régions** couvertes
 - **100% open source**
