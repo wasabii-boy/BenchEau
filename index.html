@@ -1,522 +1,566 @@
-<!doctype html>
-<html lang="fr" class="h-full">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>BenchEau — Comparateur avancé d'eaux minérales</title>
-    <meta name="description" content="Comparateur complet des eaux minérales françaises avec analyses détaillées, composition minérale, et recommandations d'usage." />
-    <meta name="color-scheme" content="light dark">
-    <meta name="theme-color" content="#0891b2">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="alternate icon" href="/favicon.ico">
-
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
-    
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: {
-                50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
-                400: '#38bdf8', 500: '#0891b2', 600: '#0e7490', 700: '#155e75',
-                800: '#164e63', 900: '#0c4a6e',
-              }
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-in-out',
-              'slide-up': 'slideUp 0.3s ease-out',
-              'float': 'float 3s ease-in-out infinite',
-            }
-          }
-        }
-      }
-      
-      // Dark mode detection and initialization
-      function initDarkMode() {
-        const isDark = localStorage.getItem('darkMode') === 'true' || 
-                      (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-      
-      // Initialize dark mode immediately
-      initDarkMode();
-    </script>
-    
-    <style>
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1); } }
-      @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-5px); } }
-      @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 rgba(8, 145, 178, 0.4); } 50% { box-shadow: 0 0 20px rgba(8, 145, 178, 0.6); } }
-      
-      .glass { 
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-      .dark .glass { 
-        background: rgba(15, 23, 42, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.4);
-      }
-      
-      .shadow-soft { box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04); }
-      .shadow-soft-lg { box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15), 0 2px 20px -2px rgba(0, 0, 0, 0.04); }
-      
-      .dark .shadow-soft { box-shadow: 0 4px 20px -3px rgba(0, 0, 0, 0.5), 0 10px 25px -2px rgba(0, 0, 0, 0.3); }
-      .dark .shadow-soft-lg { box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.7), 0 4px 25px -2px rgba(0, 0, 0, 0.4); }
-
-      /* New Quality Rating System */
-      .quality-excellent { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
-      .quality-good { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
-      .quality-fair { background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; }
-      .quality-poor { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; }
-      .quality-bad { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
-      
-      /* Accessibility improvements */
-      .quality-indicator {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.125rem 0.5rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-      }
-      
-      .quality-indicator::before {
-        content: '';
-        width: 0.5rem;
-        height: 0.5rem;
-        border-radius: 50%;
-        background: currentColor;
-        opacity: 0.8;
-      }
-      
-      /* Safety badges for vulnerable groups */
-      .safety-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.5rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        border: 1px solid;
-      }
-      
-      .safety-baby { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-      .safety-elderly { background: #ddd6fe; color: #6b21a8; border-color: #c4b5fd; }
-      .safety-general { background: #dcfce7; color: #166534; border-color: #86efac; }
-      
-      .dark .safety-baby { background: rgba(146, 64, 14, 0.2); color: #fcd34d; }
-      .dark .safety-elderly { background: rgba(107, 33, 168, 0.2); color: #c4b5fd; }
-      .dark .safety-general { background: rgba(22, 101, 52, 0.2); color: #86efac; }
-      
-      .focus-ring:focus {
-        outline: none;
-        ring: 2px;
-        ring-color: #0891b2;
-        ring-opacity: 0.5;
-        border-color: #0891b2;
-      }
-
-      /* Modern card hover effects */
-      .water-card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .water-card:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.15);
-      }
-      .dark .water-card:hover {
-        box-shadow: 0 20px 60px -10px rgba(8, 145, 178, 0.3);
-      }
-
-      /* Modern responsive grid */
-      .water-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1rem;
-      }
-
-      @media (min-width: 768px) {
-        .water-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-      }
-      @media (min-width: 1024px) {
-        .water-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-      }
-
-      /* Mineral composition bars */
-      .mineral-bar {
-        height: 4px;
-        background: linear-gradient(90deg, #0891b2, #06b6d4);
-        border-radius: 2px;
-        transition: all 0.3s ease;
-      }
-      
-      .dark .mineral-bar {
-        background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-      }
-      
-      /* Fix background gradient repeat */
-      body {
-        background-attachment: fixed;
-        background-repeat: no-repeat;
-        background-size: cover;
-        min-height: 100vh;
-      }
-    </style>
-  </head>
-  
-  <body class="min-h-screen font-sans antialiased bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-900 dark:text-slate-100">
-    
-
-    <!-- Header -->
-    <header class="relative z-20 glass shadow-soft border-b border-slate-200/50 dark:border-slate-700/50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-          <a href="index.html" class="flex items-center space-x-4 hover:opacity-80 transition-opacity">
-            <div class="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-soft">
-              <span class="text-xl">💧</span>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BenchEau — Comparateur d'eaux minérales</title>
+    <meta name="description" content="Comparez 81 eaux minérales françaises : 65 eaux minérales naturelles et 16 eaux de source">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">💧 BenchEau</h1>
+                <button class="dark-mode-toggle" aria-label="Basculer le mode sombre">🌙</button>
             </div>
-            <div>
-              <h1 class="text-xl font-bold text-slate-900 dark:text-white">BenchEau</h1>
-              <p class="text-sm text-slate-600 dark:text-slate-400">Comparateur d'eaux minérales</p>
-            </div>
-          </a>
-          
-          <div class="flex items-center space-x-6">
-            <div class="flex items-center space-x-4">
-              <div class="flex items-center space-x-2">
-                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                  <span id="count" class="font-bold text-slate-900 dark:text-white">0</span> eaux analysées
-                </span>
-              </div>
-              
-              <!-- Active filters indicator -->
-              <div id="filter-indicator" class="hidden px-2 py-1 bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-300 rounded-full text-xs font-medium">
-                <span id="filter-count">0</span> filtre(s) actif(s)
-              </div>
-            </div>
-            
-            <!-- Navigation menu -->
-            <div class="flex items-center space-x-2">
-              <a href="toutes-les-eaux.html" class="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors focus-ring">
-                📊 Vue tableau
-              </a>
-              <a href="eaux-en-detail.html" class="px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors focus-ring">
-                🗂️ Vue cartes
-              </a>
-            </div>
-            
-            <!-- Dark mode toggle -->
-            <button id="dark-mode-toggle" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-ring" 
-                    title="Basculer le thème">
-              <span class="dark:hidden">🌙</span>
-              <span class="hidden dark:inline">☀️</span>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="main-nav">
+            <button class="nav-btn active" data-view="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Accueil</span>
             </button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Loading/Error banners -->
-      <div id="loading-banner" class="hidden border-t border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-900 dark:bg-primary-950/40 dark:text-primary-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div class="flex items-center text-sm">
-            <div class="animate-spin w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full mr-3"></div>
-            <span>Chargement des analyses d'eaux minérales…</span>
-          </div>
-        </div>
-      </div>
+            <button class="nav-btn" data-view="eaux">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Toutes les eaux (81)</span>
+            </button>
+            <button class="nav-btn" data-view="robinet">
+                <span class="nav-icon">🚰</span>
+                <span class="nav-text">Eau du robinet</span>
+            </button>
+            <button class="nav-btn" data-view="compare">
+                <span class="nav-icon">⚖️</span>
+                <span class="nav-text">Comparer</span>
+            </button>
+        </nav>
 
-      <div id="error-banner" class="hidden border-t border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div class="flex items-center text-sm">
-            <span class="text-red-600 mr-2">⚠️</span>
-            <div role="alert"></div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-1 py-8 ml-0 transition-all duration-300">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <!-- Stats Cards -->
-        <div class="mb-8 animate-fade-in">
-          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            <div class="glass rounded-xl p-4 text-center animate-slide-up">
-              <div class="text-2xl mb-2">📊</div>
-              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</div>
-              <div id="stats-total" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
-            </div>
-            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.1s">
-              <div class="text-2xl mb-2">💧</div>
-              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Plates</div>
-              <div id="stats-plates" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
-            </div>
-            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.2s">
-              <div class="text-2xl mb-2">🫧</div>
-              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">Pétillantes</div>
-              <div id="stats-petillantes" class="text-xl font-bold text-slate-900 dark:text-white">0</div>
-            </div>
-            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.3s">
-              <div class="text-2xl mb-2">⚗️</div>
-              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">pH Moyen</div>
-              <div id="stats-ph" class="text-xl font-bold text-slate-900 dark:text-white">-</div>
-            </div>
-            <div class="glass rounded-xl p-4 text-center animate-slide-up" style="animation-delay: 0.4s">
-              <div class="text-2xl mb-2">🧪</div>
-              <div class="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide">RS Moyen</div>
-              <div id="stats-rs" class="text-xl font-bold text-slate-900 dark:text-white">-</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Filtres Section -->
-        <div class="mb-6 animate-fade-in">
-          <div class="glass rounded-xl p-4 shadow-soft">
-            <div class="flex flex-col lg:flex-row lg:items-center gap-4">
-              <div class="flex items-center space-x-2">
-                <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                  <span class="text-xs">🔍</span>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home View -->
+            <section id="home" class="view active">
+                <div class="hero">
+                    <h2>Comparez 81 eaux françaises</h2>
+                    <p>Analysez et comparez toutes les eaux minérales et de source disponibles en France</p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">65</div>
+                            <div class="stat-label">Eaux minérales naturelles</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">16</div>
+                            <div class="stat-label">Eaux de source</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">31</div>
+                            <div class="stat-label">Eaux gazeuses</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">52</div>
+                            <div class="stat-label">Critères analysés</div>
+                        </div>
+                    </div>
                 </div>
-                <span class="text-sm font-medium text-slate-900 dark:text-white">Filtres :</span>
-              </div>
-              
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
-                <input id="search" type="text" placeholder="Recherche..." 
-                       class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring" />
+
+                <div class="categories">
+                    <h3>Explorer par type</h3>
+                    <div class="category-grid">
+                        <button class="category-card" data-view="eaux">
+                            <span class="category-icon">📊</span>
+                            <h4>Tableau complet des eaux</h4>
+                            <p>Explorez toutes les eaux avec filtres avancés et scoring</p>
+                        </button>
+                        <button class="category-card" data-view="robinet">
+                            <span class="category-icon">🚰</span>
+                            <h4>Eau du robinet</h4>
+                            <p>Analyse complète de l'eau du robinet française</p>
+                        </button>
+                        <button class="category-card" data-view="compare">
+                            <span class="category-icon">⚖️</span>
+                            <h4>Comparateur</h4>
+                            <p>Comparez deux eaux côte à côte en détail</p>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- All Waters Table View -->
+            <section id="eaux" class="view">
+                <div class="view-header">
+                    <h2>📊 Toutes les eaux françaises (81)</h2>
+                    <div class="search-filter">
+                        <input type="text" id="searchEaux" placeholder="🔍 Rechercher une eau ou région..." class="search-input">
+                        <select id="filterType" class="filter-select">
+                            <option value="all">Tous les types</option>
+                            <option value="minerale">Eaux minérales (65)</option>
+                            <option value="source">Eaux de source (16)</option>
+                            <option value="gazeuse">Eaux gazeuses (31)</option>
+                        </select>
+                        <select id="filterScore" class="filter-select">
+                            <option value="all">Tous les scores</option>
+                            <option value="excellent">Excellent (90-100)</option>
+                            <option value="good">Très bon (75-89)</option>
+                            <option value="average">Bon (60-74)</option>
+                            <option value="poor">Faible (0-59)</option>
+                        </select>
+                        <select id="filterMineralization" class="filter-select">
+                            <option value="all">Toutes les minéralisations</option>
+                            <option value="tres-faible">Très faiblement minéralisée</option>
+                            <option value="faible">Faiblement minéralisée</option>
+                            <option value="moyenne">Moyennement minéralisée</option>
+                            <option value="forte">Fortement minéralisée</option>
+                        </select>
+                    </div>
+                </div>
                 
-                <select id="filter-mineralization" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring">
-                  <option value="">Toute minéralisation</option>
-                  <option value="tres-faiblement-mineralisee">Très faible</option>
-                  <option value="faiblement-mineralisee">Faible</option>
-                  <option value="moyennement-mineralisee">Modérée</option>
-                  <option value="riche-en-sels-mineraux">Riche</option>
-                </select>
+                <div class="table-controls">
+                    <div class="view-toggle">
+                        <button id="gridViewBtn" class="view-btn active">
+                            <span class="view-icon">🔲</span>
+                            <span>Cartes</span>
+                        </button>
+                        <button id="tableViewBtn" class="view-btn">
+                            <span class="view-icon">📋</span>
+                            <span>Tableau</span>
+                        </button>
+                    </div>
+                    <div class="sort-controls">
+                        <select id="sortBy" class="filter-select">
+                            <option value="score-desc">Score (décroissant)</option>
+                            <option value="score-asc">Score (croissant)</option>
+                            <option value="name-asc">Nom (A-Z)</option>
+                            <option value="name-desc">Nom (Z-A)</option>
+                            <option value="ph-asc">pH (croissant)</option>
+                            <option value="ph-desc">pH (décroissant)</option>
+                        </select>
+                    </div>
+                    <div class="results-info">
+                        <span id="resultsCount">81 eaux affichées</span>
+                    </div>
+                </div>
                 
-                <select id="filter-usage" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus-ring">
-                  <option value="">Tous usages</option>
-                  <option value="nourrissons">👶 Nourrissons</option>
-                  <option value="enfants">🧒 Enfants</option>
-                  <option value="consommation-quotidienne">🏠 Quotidien</option>
-                  <option value="digestion">🌿 Digestion</option>
-                  <option value="apport-mineraux">💪 Minéraux</option>
-                  <option value="sport">🏃 Sport</option>
-                </select>
+                <!-- Grid View -->
+                <div id="eauxGrid" class="waters-grid"></div>
                 
-                <div class="flex items-center space-x-2">
-                  <label class="flex items-center space-x-1 cursor-pointer">
-                    <input id="filter-flat" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
-                    <span class="text-sm">💧</span>
-                  </label>
-                  <label class="flex items-center space-x-1 cursor-pointer">
-                    <input id="filter-sparkling" type="checkbox" checked class="w-4 h-4 text-primary-600 rounded focus-ring" />
-                    <span class="text-sm">🫧</span>
-                  </label>
-                  <button id="reset-filters" class="px-2 py-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 text-xs font-medium transition-colors" title="Réinitialiser">
-                    🔄
-                  </button>
+                <!-- Table View -->
+                <div id="eauxTable" class="waters-table" style="display: none;">
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">Nom</th>
+                                    <th class="sortable" data-sort="type">Type</th>
+                                    <th class="sortable" data-sort="score">Score</th>
+                                    <th class="sortable" data-sort="ph">pH</th>
+                                    <th class="sortable" data-sort="calcium">Calcium</th>
+                                    <th class="sortable" data-sort="magnesium">Magnésium</th>
+                                    <th class="sortable" data-sort="gazeuse">Gazeuse</th>
+                                    <th class="sortable" data-sort="origine">Origine</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </section>
 
-        <!-- Intent-Based Navigation -->
-        <div class="mb-8 animate-fade-in">
-          <div class="glass rounded-xl p-6 shadow-soft">
-            <div class="mb-6">
-              <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Trouvez l'eau adaptée à vos besoins</h2>
-              <p class="text-sm text-slate-600 dark:text-slate-400">Sélectionnez votre profil pour des recommandations personnalisées</p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <button class="intent-filter p-4 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-200 dark:border-pink-800 hover:from-pink-100 hover:to-rose-100 dark:hover:from-pink-900/30 dark:hover:to-rose-900/30 transition-all duration-200 text-left" data-intent="family">
-                <div class="flex items-center space-x-3 mb-2">
-                  <div class="w-10 h-10 bg-pink-100 dark:bg-pink-900 rounded-lg flex items-center justify-center">
-                    <span class="text-lg">👶</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-slate-900 dark:text-white">Famille & Enfants</h3>
-                  </div>
+            <!-- Tap Water View -->
+            <section id="robinet" class="view">
+                <div class="view-header">
+                    <h2>🚰 Eau du robinet française</h2>
                 </div>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Eaux adaptées aux nourrissons, enfants et usage quotidien familial</p>
-                <div class="mt-3 flex flex-wrap gap-1">
-                  <span class="safety-badge safety-baby text-xs">👶 Nourrissons OK</span>
-                  <span class="safety-badge safety-general text-xs">🏠 Usage quotidien</span>
-                </div>
-              </button>
-              
-              <button class="intent-filter p-4 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/30 transition-all duration-200 text-left" data-intent="sport">
-                <div class="flex items-center space-x-3 mb-2">
-                  <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <span class="text-lg">🏃</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-slate-900 dark:text-white">Sport & Performance</h3>
-                  </div>
-                </div>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Eaux riches en minéraux pour l'effort et la récupération</p>
-                <div class="mt-3 flex flex-wrap gap-1">
-                  <span class="safety-badge safety-general text-xs">💪 Minéraux</span>
-                  <span class="safety-badge safety-general text-xs">⚡ Hydratation</span>
-                </div>
-              </button>
-              
-              <button class="intent-filter p-4 rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 transition-all duration-200 text-left" data-intent="health">
-                <div class="flex items-center space-x-3 mb-2">
-                  <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                    <span class="text-lg">🩺</span>
-                  </div>
-                  <div>
-                    <h3 class="font-semibold text-slate-900 dark:text-white">Santé & Digestion</h3>
-                  </div>
-                </div>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Eaux thérapeutiques et digestives, seniors</p>
-                <div class="mt-3 flex flex-wrap gap-1">
-                  <span class="safety-badge safety-elderly text-xs">👴 Seniors</span>
-                  <span class="safety-badge safety-general text-xs">🌿 Digestion</span>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
+                
+                <div class="tap-water-info">
+                    <div class="tap-hero">
+                        <div class="tap-card">
+                            <div class="tap-header">
+                                <h3>💧 Eau du robinet</h3>
+                                <div class="score-badge score-good">78/100</div>
+                            </div>
+                            <p class="tap-description">L'eau du robinet française est contrôlée selon 63 critères réglementaires et distribuée dans 95% des communes.</p>
+                            
+                            <div class="tap-stats">
+                                <div class="tap-stat">
+                                    <span class="stat-value">63</span>
+                                    <span class="stat-label">Contrôles qualité</span>
+                                </div>
+                                <div class="tap-stat">
+                                    <span class="stat-value">0.003€</span>
+                                    <span class="stat-label">Prix par litre</span>
+                                </div>
+                                <div class="tap-stat">
+                                    <span class="stat-value">95%</span>
+                                    <span class="stat-label">Population desservie</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- Contextual Recommendations Section -->
-        <div class="mb-8 animate-fade-in">
-          <div class="glass rounded-xl p-6 shadow-soft">
-            <div class="flex items-center justify-between mb-6">
-              <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
-                  <span class="text-sm text-white">⭐</span>
-                </div>
-                <div>
-                  <h2 class="text-lg font-bold text-slate-900 dark:text-white">Eaux recommandées</h2>
-                  <p class="text-xs text-slate-600 dark:text-slate-400" id="recommendations-subtitle">Sélectionnez un profil ci-dessus pour voir les recommendations</p>
-                </div>
-              </div>
-              
-              <div class="flex items-center space-x-2">
-                <a href="toutes-les-eaux.html" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg transition-colors focus-ring">
-                  📊 Vue tableau
-                </a>
-                <a href="eaux-en-detail.html" class="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg transition-colors focus-ring">
-                  🗂️ Vue cartes
-                </a>
-              </div>
-            </div>
-            
-            <div id="top5-chart" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              <!-- Chart will be populated by JavaScript -->
-            </div>
-          </div>
-        </div>
+                    <!-- Regional Water Quality -->
+                    <div class="regional-waters">
+                        <h3>🗺️ Qualité de l'eau par région</h3>
+                        
+                        <div class="regional-grid">
+                            <div class="regional-card">
+                                <h4>🏔️ Auvergne-Rhône-Alpes</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-good"></div>
+                                    <span class="indicator-label">Excellente qualité générale</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Calcaire modéré à élevé</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-good"></div>
+                                    <span class="indicator-label">Absence de pollution</span>
+                                </div>
+                                <p class="comparison-note">Sources de montagne, eau naturellement pure</p>
+                            </div>
 
-        <!-- Navigation Cards -->
-        <div class="grid md:grid-cols-2 gap-6 animate-fade-in">
-          <!-- Vue tableau -->
-          <a href="toutes-les-eaux.html" class="group glass rounded-xl p-6 shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-center space-x-4 mb-4">
-              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span class="text-white text-lg">📊</span>
-              </div>
-              <div>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">Vue tableau</h3>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Tableau complet avec tri et recherche</p>
-              </div>
-            </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Accédez à toutes les eaux dans un tableau professionnel avec fonctions de tri, recherche et comparaison détaillée.
-            </p>
-          </a>
-          
-          <!-- Vue en cartes -->
-          <a href="eaux-en-detail.html" class="group glass rounded-xl p-6 shadow-soft hover:shadow-soft-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="flex items-center space-x-4 mb-4">
-              <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <span class="text-white text-lg">🗂️</span>
-              </div>
-              <div>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors">Vue en cartes</h3>
-                <p class="text-sm text-slate-600 dark:text-slate-400">Affichage visuel détaillé</p>
-              </div>
-            </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Explorez les eaux sous forme de cartes interactives avec composition minérale et filtres avancés.
-            </p>
-          </a>
-        </div>
-      </div>
-    </main>
+                            <div class="regional-card">
+                                <h4>🌾 Île-de-France</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Qualité surveillée</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-poor"></div>
+                                    <span class="indicator-label">Très calcaire</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Traces de pesticides</span>
+                                </div>
+                                <p class="comparison-note">Traitement intensif, surveillance renforcée</p>
+                            </div>
 
-    <!-- Footer -->
-    <footer class="mt-16 glass border-t border-slate-200/50 dark:border-slate-700/50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex flex-col md:flex-row items-center justify-between">
-          <div class="text-sm text-slate-600 dark:text-slate-400 mb-4 md:mb-0">
-            © 2024 BenchEau. Tous droits réservés.
-          </div>
-          <div class="text-sm text-slate-600 dark:text-slate-400">
-            Fait avec ❤️ par <span class="font-semibold text-slate-900 dark:text-white">Wasabii_boy</span>
-          </div>
-        </div>
-      </div>
-    </footer>
+                            <div class="regional-card">
+                                <h4>🌊 Bretagne</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Qualité variable</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-good"></div>
+                                    <span class="indicator-label">Eau douce</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-poor"></div>
+                                    <span class="indicator-label">Nitrates élevés</span>
+                                </div>
+                                <p class="comparison-note">Agriculture intensive, traitement spécialisé</p>
+                            </div>
 
-    <!-- Water Detail Modal -->
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 p-4 overflow-y-auto">
-      <div class="min-h-screen flex items-center justify-center">
-        <div class="glass rounded-2xl shadow-soft-lg max-w-4xl w-full mx-auto animate-slide-up">
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-6">
-              <div class="flex items-center space-x-4">
-                <div id="modal-icon" class="text-3xl"></div>
-                <div>
-                  <h2 id="modal-title" class="text-2xl font-bold text-slate-900 dark:text-white"></h2>
-                  <p id="modal-subtitle" class="text-slate-600 dark:text-slate-400"></p>
+                            <div class="regional-card">
+                                <h4>🌿 Nouvelle-Aquitaine</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-good"></div>
+                                    <span class="indicator-label">Bonne qualité</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Calcaire modéré</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Surveillance pesticides</span>
+                                </div>
+                                <p class="comparison-note">Nappes souterraines préservées</p>
+                            </div>
+
+                            <div class="regional-card">
+                                <h4>☀️ Provence-Alpes-Côte d'Azur</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-good"></div>
+                                    <span class="indicator-label">Qualité contrôlée</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-poor"></div>
+                                    <span class="indicator-label">Très calcaire</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Chloration renforcée</span>
+                                </div>
+                                <p class="comparison-note">Climat méditerranéen, ressources limitées</p>
+                            </div>
+
+                            <div class="regional-card">
+                                <h4>🏭 Hauts-de-France</h4>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-average"></div>
+                                    <span class="indicator-label">Qualité surveillée</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-poor"></div>
+                                    <span class="indicator-label">Eau très dure</span>
+                                </div>
+                                <div class="quality-indicator">
+                                    <div class="indicator-dot indicator-poor"></div>
+                                    <span class="indicator-label">Pollution industrielle passée</span>
+                                </div>
+                                <p class="comparison-note">Traitements spécialisés, amélioration continue</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Map -->
+                    <div class="interactive-map">
+                        <h3>🗺️ Carte interactive des risques et pollution</h3>
+                        
+                        <div class="map-container">
+                            <div class="map-placeholder">
+                                <h3>🇫🇷 Carte de France Interactive</h3>
+                                <p>Visualisation des zones de risque et de la qualité de l'eau par département</p>
+                            </div>
+                            
+                            <div class="legend">
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: var(--accent-green);"></div>
+                                    <span class="legend-text">Très bonne qualité</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: var(--primary-blue);"></div>
+                                    <span class="legend-text">Bonne qualité</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: var(--accent-orange);"></div>
+                                    <span class="legend-text">Qualité surveillée</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background: var(--accent-red);"></div>
+                                    <span class="legend-text">Risques identifiés</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pollution Alerts -->
+                    <div class="pollution-alerts">
+                        <h3>⚠️ Alertes pollution et recommandations</h3>
+                        
+                        <div class="alerts-grid">
+                            <div class="alert-card high-risk">
+                                <div class="alert-header">
+                                    <span class="alert-icon">🚨</span>
+                                    <h4 class="alert-title">Nitrates agricoles</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Dépassements réguliers des seuils dans certaines zones agricoles intensives. Surveillance renforcée et traitements spécialisés en place.
+                                </div>
+                                <div class="alert-regions">Zones concernées : Bretagne, Beauce, Champagne</div>
+                            </div>
+
+                            <div class="alert-card">
+                                <div class="alert-header">
+                                    <span class="alert-icon">⚠️</span>
+                                    <h4 class="alert-title">Pesticides</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Traces de pesticides détectées sous les seuils réglementaires. Programmes de protection des captages en cours.
+                                </div>
+                                <div class="alert-regions">Zones concernées : Bassin parisien, Vallée du Rhône</div>
+                            </div>
+
+                            <div class="alert-card">
+                                <div class="alert-header">
+                                    <span class="alert-icon">🏭</span>
+                                    <h4 class="alert-title">Pollution industrielle ancienne</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Sites industriels historiques sous surveillance. Traitements adaptés pour éliminer les polluants résiduels.
+                                </div>
+                                <div class="alert-regions">Zones concernées : Nord, Lorraine, Rhône-Alpes</div>
+                            </div>
+
+                            <div class="alert-card low-risk">
+                                <div class="alert-header">
+                                    <span class="alert-icon">✅</span>
+                                    <h4 class="alert-title">Zones préservées</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Ressources naturellement protégées avec une qualité exceptionnelle. Aucun traitement spécifique nécessaire.
+                                </div>
+                                <div class="alert-regions">Zones concernées : Massifs montagneux, Corse, certaines zones rurales</div>
+                            </div>
+
+                            <div class="alert-card">
+                                <div class="alert-header">
+                                    <span class="alert-icon">🧪</span>
+                                    <h4 class="alert-title">Émergents chimiques</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Surveillance de nouveaux polluants (résidus médicamenteux, microplastiques). Recherche de solutions de traitement.
+                                </div>
+                                <div class="alert-regions">Surveillance nationale : toutes régions</div>
+                            </div>
+
+                            <div class="alert-card">
+                                <div class="alert-header">
+                                    <span class="alert-icon">💧</span>
+                                    <h4 class="alert-title">Sécheresse et ressources</h4>
+                                </div>
+                                <div class="alert-content">
+                                    Gestion optimisée des ressources en période de sécheresse. Interconnexions entre réseaux pour assurer la continuité.
+                                </div>
+                                <div class="alert-regions">Zones sensibles : Sud-Est, Sud-Ouest</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tap-comparison">
+                        <h3>🔍 Comparaison avec les eaux embouteillées</h3>
+                        
+                        <div class="comparison-grid">
+                            <div class="comparison-card">
+                                <h4>💰 Coût</h4>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Eau du robinet</span>
+                                    <span class="comparison-value good">0.003€/L</span>
+                                </div>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Eau embouteillée</span>
+                                    <span class="comparison-value poor">0.50€/L</span>
+                                </div>
+                                <p class="comparison-note">💡 L'eau du robinet coûte 150x moins cher</p>
+                            </div>
+
+                            <div class="comparison-card">
+                                <h4>🌍 Impact environnemental</h4>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Eau du robinet</span>
+                                    <span class="comparison-value good">0.0001 kg CO₂/L</span>
+                                </div>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Eau embouteillée</span>
+                                    <span class="comparison-value poor">0.25 kg CO₂/L</span>
+                                </div>
+                                <p class="comparison-note">💡 2500x moins d'émissions CO₂</p>
+                            </div>
+
+                            <div class="comparison-card">
+                                <h4>🔬 Qualité sanitaire</h4>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Contrôles robinet</span>
+                                    <span class="comparison-value good">Quotidiens</span>
+                                </div>
+                                <div class="comparison-detail">
+                                    <span class="comparison-label">Contrôles embouteillée</span>
+                                    <span class="comparison-value average">Mensuels</span>
+                                </div>
+                                <p class="comparison-note">💡 Surveillance plus fréquente</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tap-quality">
+                        <h3>🧪 Composition moyenne de l'eau du robinet française</h3>
+                        
+                        <div class="quality-grid">
+                            <div class="quality-item">
+                                <span class="quality-label">pH</span>
+                                <span class="quality-value">7.0 - 8.5</span>
+                            </div>
+                            <div class="quality-item">
+                                <span class="quality-label">Calcium</span>
+                                <span class="quality-value">60-120 mg/L</span>
+                            </div>
+                            <div class="quality-item">
+                                <span class="quality-label">Magnésium</span>
+                                <span class="quality-value">15-30 mg/L</span>
+                            </div>
+                            <div class="quality-item">
+                                <span class="quality-label">Sodium</span>
+                                <span class="quality-value">10-50 mg/L</span>
+                            </div>
+                            <div class="quality-item">
+                                <span class="quality-label">Chlore résiduel</span>
+                                <span class="quality-value">0.1-0.3 mg/L</span>
+                            </div>
+                            <div class="quality-item">
+                                <span class="quality-label">Nitrates</span>
+                                <span class="quality-value">&lt; 25 mg/L</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tap-tips">
+                        <h3>💡 Conseils pour optimiser votre eau du robinet</h3>
+                        
+                        <div class="tips-grid">
+                            <div class="tip-card">
+                                <div class="tip-icon">🥶</div>
+                                <h4>Laissez couler</h4>
+                                <p>Faites couler l'eau 1-2 minutes le matin pour évacuer l'eau stagnante des canalisations</p>
+                            </div>
+                            
+                            <div class="tip-card">
+                                <div class="tip-icon">🧊</div>
+                                <h4>Réfrigérez</h4>
+                                <p>Conservez l'eau au réfrigérateur dans une carafe en verre pour améliorer le goût</p>
+                            </div>
+                            
+                            <div class="tip-card">
+                                <div class="tip-icon">💨</div>
+                                <h4>Aérez</h4>
+                                <p>Laissez l'eau à l'air libre 30 minutes pour éliminer le goût de chlore</p>
+                            </div>
+                            
+                            <div class="tip-card">
+                                <div class="tip-icon">🔍</div>
+                                <h4>Vérifiez la qualité</h4>
+                                <p>Consultez le rapport qualité annuel de votre commune sur le site de votre mairie</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <button id="modal-close" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors">
-                <span class="text-lg">×</span>
-              </button>
+            </section>
+
+            <!-- Compare View -->
+            <section id="compare" class="view">
+                <div class="view-header">
+                    <h2>⚖️ Comparer les eaux</h2>
+                </div>
+                <div class="compare-container">
+                    <div class="compare-selectors">
+                        <div class="selector-group">
+                            <label>Première eau</label>
+                            <select id="compareSelect1" class="compare-select">
+                                <option value="">Sélectionner une eau</option>
+                            </select>
+                        </div>
+                        <div class="selector-group">
+                            <label>Deuxième eau</label>
+                            <select id="compareSelect2" class="compare-select">
+                                <option value="">Sélectionner une eau</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="compareResults" class="compare-results"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modal -->
+        <div id="waterModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Détails de l'eau</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div id="modalBody" class="modal-body"></div>
             </div>
-            
-            <div id="modal-content" class="space-y-6">
-              <!-- Content filled by JavaScript -->
-            </div>
-          </div>
         </div>
-      </div>
     </div>
 
-    <noscript>
-      <div class="fixed inset-0 bg-slate-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
-        <div class="bg-white dark:bg-slate-800 rounded-xl p-8 max-w-md text-center">
-          <span class="text-4xl mb-4 block">⚠️</span>
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">JavaScript requis</h3>
-          <p class="text-slate-600 dark:text-slate-400">Cette application nécessite JavaScript pour fonctionner.</p>
-        </div>
-      </div>
-    </noscript>
-    
-    <script type="module" src="./js/main.js?v=17"></script>
-  </body>
+    <script src="app.js"></script>
+</body>
 </html>

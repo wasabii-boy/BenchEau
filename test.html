@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test BenchEau</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .results { margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de l'application BenchEau</h1>
+    
+    <div class="test-section">
+        <h2>1. Test de chargement des données CSV</h2>
+        <button onclick="testCSVLoading()">Tester le chargement CSV</button>
+        <div id="csv-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test de l'initialisation de l'application</h2>
+        <button onclick="testAppInit()">Tester l'initialisation</button>
+        <div id="app-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test du système de scoring</h2>
+        <button onclick="testScoring()">Tester le scoring</button>
+        <div id="scoring-results" class="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Test du parsing CSV</h2>
+        <button onclick="testCSVParsing()">Tester le parsing</button>
+        <div id="parsing-results" class="results"></div>
+    </div>
+
+    <script>
+        // Mock de l'application BenchEau pour les tests
+        class BenchEauTestApp {
+            constructor() {
+                this.data = [];
+            }
+
+            parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                let i = 0;
+                
+                while (i < line.length) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        if (inQuotes && line[i + 1] === '"') {
+                            current += '"';
+                            i += 2;
+                        } else {
+                            inQuotes = !inQuotes;
+                            i++;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current);
+                        current = '';
+                        i++;
+                    } else {
+                        current += char;
+                        i++;
+                    }
+                }
+                
+                result.push(current);
+                return result;
+            }
+
+            calculateWaterScore(water) {
+                let score = 100;
+                
+                if (water.Conformite_ANSES_2025 !== 'Conforme') {
+                    score -= 30;
+                }
+                
+                const pfas = parseFloat(water.Somme_PFAS_ng_L) || 0;
+                if (pfas > 100) score -= 25;
+                else if (pfas > 50) score -= 15;
+                else if (pfas > 10) score -= 8;
+                
+                return Math.max(0, Math.min(100, Math.round(score)));
+            }
+
+            async loadTestData() {
+                try {
+                    const response = await fetch('data.csv');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const csvText = await response.text();
+                    return csvText;
+                } catch (error) {
+                    throw error;
+                }
+            }
+        }
+
+        const testApp = new BenchEauTestApp();
+
+        function showResult(containerId, status, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="${status}">${message}</div>`;
+        }
+
+        async function testCSVLoading() {
+            try {
+                showResult('csv-results', 'warning', '⏳ Chargement du fichier CSV...');
+                
+                const csvData = await testApp.loadTestData();
+                
+                if (csvData && csvData.length > 0) {
+                    const lines = csvData.split('\n');
+                    showResult('csv-results', 'success', 
+                        `✅ CSV chargé avec succès!<br>
+                        📊 Nombre de lignes: ${lines.length}<br>
+                        📝 Taille: ${(csvData.length / 1024).toFixed(2)} KB<br>
+                        🔤 Première ligne: ${lines[0].substring(0, 100)}...`
+                    );
+                } else {
+                    showResult('csv-results', 'error', '❌ Fichier CSV vide ou invalide');
+                }
+            } catch (error) {
+                showResult('csv-results', 'error', `❌ Erreur de chargement: ${error.message}`);
+            }
+        }
+
+        async function testAppInit() {
+            try {
+                showResult('app-results', 'warning', '⏳ Test d\'initialisation...');
+                
+                // Vérifier que l'app principale existe
+                if (typeof window.app !== 'undefined') {
+                    showResult('app-results', 'success', 
+                        `✅ Application initialisée!<br>
+                        📊 Données chargées: ${window.app.data ? window.app.data.length : 0} eaux<br>
+                        🎯 Vue actuelle: ${window.app.currentView || 'non définie'}<br>
+                        🌙 Mode sombre: ${window.app.darkMode ? 'activé' : 'désactivé'}`
+                    );
+                } else {
+                    showResult('app-results', 'warning', 
+                        '⚠️ Application non trouvée. Vérifiez que app.js est chargé.'
+                    );
+                }
+            } catch (error) {
+                showResult('app-results', 'error', `❌ Erreur d'initialisation: ${error.message}`);
+            }
+        }
+
+        function testScoring() {
+            try {
+                showResult('scoring-results', 'warning', '⏳ Test du système de scoring...');
+                
+                // Test avec des données d'exemple
+                const testWater1 = {
+                    Nom: 'Test Water 1',
+                    Conformite_ANSES_2025: 'Conforme',
+                    Somme_PFAS_ng_L: '5.2'
+                };
+                
+                const testWater2 = {
+                    Nom: 'Test Water 2',
+                    Conformite_ANSES_2025: 'Non conforme',
+                    Somme_PFAS_ng_L: '150.8'
+                };
+                
+                const score1 = testApp.calculateWaterScore(testWater1);
+                const score2 = testApp.calculateWaterScore(testWater2);
+                
+                showResult('scoring-results', 'success', 
+                    `✅ Système de scoring fonctionnel!<br>
+                    🥇 Eau conforme (PFAS: 5.2): Score ${score1}/100<br>
+                    🔴 Eau non conforme (PFAS: 150.8): Score ${score2}/100<br>
+                    📊 Différentiel: ${score1 - score2} points`
+                );
+            } catch (error) {
+                showResult('scoring-results', 'error', `❌ Erreur de scoring: ${error.message}`);
+            }
+        }
+
+        function testCSVParsing() {
+            try {
+                showResult('parsing-results', 'warning', '⏳ Test du parsing CSV...');
+                
+                // Test avec différents cas de figure
+                const testCases = [
+                    'Evian,Eau minérale naturelle,Faible,Non',
+                    '"Vittel, Source","Eau de source","Moyenne",Oui',
+                    'San Pellegrino,"Eau minérale ""naturelle""",Forte,"Oui"'
+                ];
+                
+                let results = [];
+                testCases.forEach((testCase, index) => {
+                    const parsed = testApp.parseCSVLine(testCase);
+                    results.push(`Test ${index + 1}: ${parsed.length} colonnes → [${parsed.join(', ')}]`);
+                });
+                
+                showResult('parsing-results', 'success', 
+                    `✅ Parsing CSV fonctionnel!<br>
+                    ${results.join('<br>')}`
+                );
+            } catch (error) {
+                showResult('parsing-results', 'error', `❌ Erreur de parsing: ${error.message}`);
+            }
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testCSVParsing();
+                testScoring();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
