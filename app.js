@@ -889,6 +889,9 @@ class BenchEauApp {
                 return;
             }
 
+            // Reset scroll position to top when opening modal
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             modalTitle.textContent = water.Nom;
             modalBody.innerHTML = this.createWaterDetailsHTML(water);
 
