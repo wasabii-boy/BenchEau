@@ -15,19 +15,17 @@
     --accent-orange: #F59E0B;
     --accent-red: #EF4444;
     
-    /* Backgrounds */
+    /* Light mode variables (default) */
     --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --bg-secondary: rgba(255, 255, 255, 0.1);
-    --bg-card: rgba(255, 255, 255, 0.15);
-    --bg-card-hover: rgba(255, 255, 255, 0.25);
+    --bg-secondary: rgba(255, 255, 255, 0.9);
+    --bg-card: rgba(255, 255, 255, 0.8);
+    --bg-card-hover: rgba(255, 255, 255, 0.95);
     
-    /* Text */
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255, 255, 255, 0.8);
-    --text-muted: rgba(255, 255, 255, 0.6);
+    --text-primary: #1f2937;
+    --text-secondary: #374151;
+    --text-muted: #4b5563;
     
-    /* Effects */
-    --border-color: rgba(255, 255, 255, 0.2);
+    --border-color: rgba(0, 0, 0, 0.1);
     --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.15);
     
@@ -40,6 +38,19 @@
     --z-header: 100;
     --z-modal: 1000;
     --z-tooltip: 1100;
+}
+
+/* Dark mode variables */
+body.dark-mode {
+    --bg-secondary: rgba(255, 255, 255, 0.1);
+    --bg-card: rgba(255, 255, 255, 0.15);
+    --bg-card-hover: rgba(255, 255, 255, 0.25);
+    
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.8);
+    --text-muted: rgba(255, 255, 255, 0.6);
+    
+    --border-color: rgba(255, 255, 255, 0.2);
 }
 
 html {
