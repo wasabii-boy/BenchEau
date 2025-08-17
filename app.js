@@ -5,6 +5,7 @@ class BenchEauApp {
         this.currentView = 'home';
         this.darkMode = localStorage.getItem('darkMode') === 'true';
         this.searchDebounce = null;
+        this.interactiveMap = null;
         
         this.init();
     }
@@ -15,6 +16,7 @@ class BenchEauApp {
             this.calculateScores();
             this.setupEventListeners();
             this.setupDarkMode();
+            this.initInteractiveMap();
             this.updateStats();
             this.switchView('home');
         } catch (error) {
@@ -313,7 +315,7 @@ class BenchEauApp {
             score: 'all',
             mineralization: 'all'
         };
-        this.currentSort = 'score-desc';
+        this.currentSort = 'name-asc';
         this.isTableView = false;
         
         this.applyFiltersAndSort();
@@ -892,7 +894,8 @@ class BenchEauApp {
             // Reset scroll position to top when opening modal
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            modalTitle.textContent = water.Nom;
+            // Créer un header complet avec badge et informations
+            modalTitle.innerHTML = this.createModalHeaderHTML(water);
             modalBody.innerHTML = this.createWaterDetailsHTML(water);
 
             modal.classList.add('active');
@@ -900,6 +903,48 @@ class BenchEauApp {
         } catch (error) {
             console.error('Erreur affichage détails:', error);
         }
+    }
+
+    getTypeBadge(water) {
+        const isGazeuse = water.Gazeuse === 'Oui';
+        const isSource = water.Type_eau === 'Eau de source';
+        
+        let badgeClass = '';
+        let badgeText = '';
+        
+        if (isGazeuse) {
+            badgeClass = 'gazeuse';
+            badgeText = '🥤 Gazeuse';
+        } else if (isSource) {
+            badgeClass = 'source';
+            badgeText = '🔍 Source';
+        } else {
+            badgeText = '⛰️ Minérale';
+        }
+        
+        return `<div class="water-badge ${badgeClass}">${badgeText}</div>`;
+    }
+
+    createModalHeaderHTML(water) {
+        if (!water) return '';
+        
+        const scoreInfo = this.getScoreInfo(water.score || 0);
+        const typeBadge = this.getTypeBadge(water);
+        
+        return `
+            <div class="modal-title-container">
+                <div class="modal-title-main">
+                    <h3 class="modal-water-name">${water.Nom}</h3>
+                    <div class="modal-badges">
+                        ${typeBadge}
+                        <div class="score-badge ${scoreInfo.class}">${water.score || 'N/A'}/100</div>
+                    </div>
+                </div>
+                <div class="modal-subtitle">
+                    ${scoreInfo.label} • ${water.Type_eau || 'Type non spécifié'}
+                </div>
+            </div>
+        `;
     }
 
     createWaterDetailsHTML(water) {
@@ -1023,6 +1068,116 @@ class BenchEauApp {
         } catch (error) {
             console.error('Erreur fermeture modal:', error);
         }
+    }
+
+    setupInteractiveMap() {
+        try {
+            const regions = document.querySelectorAll('.region');
+            const tooltip = document.getElementById('regionTooltip');
+            
+            if (!tooltip) {
+                console.warn('Tooltip de la carte non trouvé');
+                return;
+            }
+
+            regions.forEach(region => {
+                region.addEventListener('mouseenter', (e) => {
+                    const regionName = e.target.dataset.region;
+                    const quality = e.target.dataset.quality;
+                    const info = e.target.dataset.info;
+
+                    if (regionName && quality && info) {
+                        // Update tooltip content
+                        document.getElementById('tooltipRegion').textContent = regionName;
+                        document.getElementById('tooltipInfo').textContent = info;
+                        
+                        const qualityBadge = document.getElementById('tooltipQuality');
+                        qualityBadge.textContent = this.getQualityLabel(quality);
+                        qualityBadge.className = `quality-badge ${quality}`;
+
+                        // Position tooltip
+                        const rect = e.target.getBoundingClientRect();
+                        const mapRect = e.target.closest('.france-map').getBoundingClientRect();
+                        
+                        tooltip.style.left = `${rect.left - mapRect.left + rect.width/2}px`;
+                        tooltip.style.top = `${rect.top - mapRect.top - 10}px`;
+                        tooltip.style.opacity = '1';
+                        tooltip.style.transform = 'translateX(-50%) translateY(-100%)';
+                    }
+                });
+
+                region.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = '0';
+                });
+
+                region.addEventListener('click', (e) => {
+                    const regionName = e.target.dataset.region;
+                    const quality = e.target.dataset.quality;
+                    const info = e.target.dataset.info;
+                    
+                    // Show detailed info for the region
+                    alert(`${regionName}\n\nQualité: ${this.getQualityLabel(quality)}\n\n${info}`);
+                });
+            });
+
+            console.log('✅ Carte interactive configurée');
+        } catch (error) {
+            console.error('Erreur configuration carte:', error);
+        }
+    }
+
+    initInteractiveMap() {
+        try {
+            if (window.InteractiveMap) {
+                this.interactiveMap = new InteractiveMap(this);
+            } else {
+                console.warn('InteractiveMap non disponible');
+            }
+        } catch (error) {
+            console.error('Erreur init carte interactive:', error);
+        }
+    }
+
+    showRegionDetails(regionName, quality, info) {
+        const modal = document.getElementById('waterModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        
+        if (modal && modalTitle && modalBody) {
+            modalTitle.textContent = `🗺️ ${regionName}`;
+            
+            modalBody.innerHTML = `
+                <div class="region-detail">
+                    <div class="region-header">
+                        <h3>${regionName}</h3>
+                        <div class="quality-badge quality-${quality}">
+                            ${this.getQualityLabel(quality)}
+                        </div>
+                    </div>
+                    <div class="region-info">
+                        <p>${info}</p>
+                    </div>
+                    <div class="region-actions">
+                        <button onclick="window.app.closeModal()" class="btn-primary">
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    getQualityLabel(quality) {
+        const labels = {
+            'excellent': 'Excellente',
+            'good': 'Bonne',
+            'average': 'Surveillée',
+            'poor': 'Risques'
+        };
+        return labels[quality] || quality;
     }
 
     calculateScores() {

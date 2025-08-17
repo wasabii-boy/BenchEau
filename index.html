@@ -131,10 +131,10 @@
                     </div>
                     <div class="sort-controls">
                         <select id="sortBy" class="filter-select">
+                            <option value="name-asc" selected>Nom (A-Z)</option>
+                            <option value="name-desc">Nom (Z-A)</option>
                             <option value="score-desc">Score (décroissant)</option>
                             <option value="score-asc">Score (croissant)</option>
-                            <option value="name-asc">Nom (A-Z)</option>
-                            <option value="name-desc">Nom (Z-A)</option>
                             <option value="ph-asc">pH (croissant)</option>
                             <option value="ph-desc">pH (décroissant)</option>
                         </select>
@@ -317,11 +317,7 @@
                         <h3>🗺️ Carte interactive des risques et pollution</h3>
                         
                         <div class="map-container">
-                            <div class="map-placeholder">
-                                <h3>🇫🇷 Carte de France Interactive</h3>
-                                <p>Visualisation des zones de risque et de la qualité de l'eau par département</p>
-                            </div>
-                            
+                            <!-- Légende en premier -->
                             <div class="legend">
                                 <div class="legend-item">
                                     <div class="legend-color" style="background: var(--accent-green);"></div>
@@ -338,6 +334,111 @@
                                 <div class="legend-item">
                                     <div class="legend-color" style="background: var(--accent-red);"></div>
                                     <span class="legend-text">Risques identifiés</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Carte de France en dessous -->
+                            <div class="france-map">
+                                <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- Auvergne-Rhône-Alpes -->
+                                    <path d="M350 350 L450 340 L460 400 L420 450 L380 440 L350 400 Z" 
+                                          class="region excellent" 
+                                          data-region="Auvergne-Rhône-Alpes"
+                                          data-quality="excellent"
+                                          data-info="Excellente qualité générale - Sources de montagne, eau naturellement pure"/>
+                                    
+                                    <!-- Île-de-France -->
+                                    <path d="M220 180 L280 170 L290 200 L250 220 L210 210 Z" 
+                                          class="region average" 
+                                          data-region="Île-de-France"
+                                          data-quality="average"
+                                          data-info="Qualité surveillée - Très calcaire, traitement intensif"/>
+                                    
+                                    <!-- Bretagne -->
+                                    <path d="M80 200 L160 190 L170 240 L140 270 L70 260 Z" 
+                                          class="region poor" 
+                                          data-region="Bretagne"
+                                          data-quality="poor"
+                                          data-info="Qualité variable - Nitrates élevés, agriculture intensive"/>
+                                    
+                                    <!-- Nouvelle-Aquitaine -->
+                                    <path d="M150 300 L250 290 L260 380 L200 420 L140 400 Z" 
+                                          class="region good" 
+                                          data-region="Nouvelle-Aquitaine"
+                                          data-quality="good"
+                                          data-info="Bonne qualité - Nappes souterraines préservées"/>
+                                    
+                                    <!-- Provence-Alpes-Côte d'Azur -->
+                                    <path d="M400 450 L500 440 L520 500 L480 520 L420 510 Z" 
+                                          class="region average" 
+                                          data-region="Provence-Alpes-Côte d'Azur"
+                                          data-quality="average"
+                                          data-info="Qualité contrôlée - Très calcaire, chloration renforcée"/>
+                                    
+                                    <!-- Hauts-de-France -->
+                                    <path d="M200 80 L300 70 L320 120 L280 150 L190 140 Z" 
+                                          class="region poor" 
+                                          data-region="Hauts-de-France"
+                                          data-quality="poor"
+                                          data-info="Qualité surveillée - Eau très dure, pollution industrielle passée"/>
+                                    
+                                    <!-- Normandie -->
+                                    <path d="M150 140 L220 130 L230 180 L180 200 L140 190 Z" 
+                                          class="region good" 
+                                          data-region="Normandie"
+                                          data-quality="good"
+                                          data-info="Bonne qualité - Ressources côtières protégées"/>
+                                    
+                                    <!-- Grand Est -->
+                                    <path d="M300 120 L400 110 L420 180 L380 220 L290 210 Z" 
+                                          class="region average" 
+                                          data-region="Grand Est"
+                                          data-quality="average"
+                                          data-info="Qualité variable - Surveillance renforcée"/>
+                                    
+                                    <!-- Pays de la Loire -->
+                                    <path d="M120 240 L200 230 L210 290 L160 320 L110 310 Z" 
+                                          class="region good" 
+                                          data-region="Pays de la Loire"
+                                          data-quality="good"
+                                          data-info="Bonne qualité - Ressources diversifiées"/>
+                                    
+                                    <!-- Centre-Val de Loire -->
+                                    <path d="M200 210 L290 200 L300 270 L250 300 L190 290 Z" 
+                                          class="region good" 
+                                          data-region="Centre-Val de Loire"
+                                          data-quality="good"
+                                          data-info="Bonne qualité - Nappes de la Loire protégées"/>
+                                    
+                                    <!-- Bourgogne-Franche-Comté -->
+                                    <path d="M300 220 L380 210 L390 280 L340 320 L290 310 Z" 
+                                          class="region good" 
+                                          data-region="Bourgogne-Franche-Comté"
+                                          data-quality="good"
+                                          data-info="Bonne qualité - Sources de montagne"/>
+                                    
+                                    <!-- Occitanie -->
+                                    <path d="M200 380 L350 370 L370 460 L320 500 L180 490 Z" 
+                                          class="region average" 
+                                          data-region="Occitanie"
+                                          data-quality="average"
+                                          data-info="Qualité variable - Gestion adaptée au climat"/>
+                                    
+                                    <!-- Corse -->
+                                    <path d="M480 480 L520 470 L530 530 L500 540 L470 530 Z" 
+                                          class="region excellent" 
+                                          data-region="Corse"
+                                          data-quality="excellent"
+                                          data-info="Excellente qualité - Ressources préservées"/>
+                                </svg>
+                                
+                                <!-- Tooltip pour les régions -->
+                                <div id="regionTooltip" class="region-tooltip">
+                                    <div class="tooltip-header">
+                                        <strong id="tooltipRegion"></strong>
+                                        <span id="tooltipQuality" class="quality-badge"></span>
+                                    </div>
+                                    <p id="tooltipInfo"></p>
                                 </div>
                             </div>
                         </div>
@@ -561,6 +662,7 @@
         </div>
     </div>
 
+    <script src="interactive-map.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
